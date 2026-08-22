@@ -1,11 +1,91 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView, Platform, Pressable , TouchableOpacity, Alert, TextInput, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView, Platform, Pressable , TouchableOpacity, Alert, TextInput, Modal, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import UnifiedMap from '@/components/UnifiedMap';
 import { API_URL } from '@/lib/config';
 
 
+
+
+const openWhatsApp = async (phoneNumber?: string | null) => {
+  try {
+    console.log('📱 WhatsApp raw number:', phoneNumber);
+
+    if (!phoneNumber) {
+      Alert.alert(
+        'WhatsApp unavailable',
+        'No WhatsApp number is available for this customer.'
+      );
+      return;
+    }
+
+    // Normalize the number
+    let phone = String(phoneNumber)
+      .trim()
+      .replace(/[^\d+]/g, '');
+
+    console.log('📱 WhatsApp cleaned number:', phone);
+
+    // Remove + if present
+    phone = phone.replace(/^\+/, '');
+
+    // Afghanistan local number:
+    // 0745772237 -> 93745772237
+    if (phone.startsWith('0')) {
+      phone = `93${phone.slice(1)}`;
+    }
+
+    // If someone stored 0093XXXXXXXXX
+    if (phone.startsWith('0093')) {
+      phone = phone.slice(2);
+    }
+
+    console.log('📱 WhatsApp final international number:', phone);
+
+    if (!phone || phone.length < 10) {
+      Alert.alert(
+        'Invalid WhatsApp number',
+        `The stored WhatsApp number appears to be invalid:\n${phoneNumber}`
+      );
+      return;
+    }
+
+    // First try the WhatsApp native scheme.
+    const whatsappUrl = `whatsapp://send?phone=${phone}`;
+
+    try {
+      console.log('📱 Opening WhatsApp app:', whatsappUrl);
+
+      await Linking.openURL(whatsappUrl);
+
+      return;
+    } catch (whatsappError) {
+      console.warn(
+        '⚠️ WhatsApp app scheme failed, falling back to web:',
+        whatsappError
+      );
+    }
+
+    // Fallback: WhatsApp web/deep link
+    const webUrl = `https://wa.me/${phone}`;
+
+    console.log('🌐 Opening WhatsApp web URL:', webUrl);
+
+    await Linking.openURL(webUrl);
+
+  } catch (error) {
+    console.error(
+      '❌ Failed to open WhatsApp:',
+      error
+    );
+
+    Alert.alert(
+      'WhatsApp unavailable',
+      'Unable to open WhatsApp for this customer.'
+    );
+  }
+};
 
 export const STATUS_CANONICAL_MAP: Record<string, string> = {
   pending: 'pending',
@@ -569,35 +649,73 @@ const isRefundJob =
 
 
       {/* 🎯 CUSTOMER MANIFEST */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          Customer Manifest
-        </Text>
+  <View style={styles.card}>
+  <Text style={styles.sectionTitle}>
+    Customer Manifest
+  </Text>
 
-        <Text style={styles.detailText}>
-          <Text style={styles.detailLabel}>
-            NAME:
-          </Text>{' '}
-          {
-            order?.customerName?.toUpperCase() ||
-            order?.name?.toUpperCase()
-          }
-        </Text>
+  <Text style={styles.detailText}>
+    <Text style={styles.detailLabel}>
+      NAME:
+    </Text>{' '}
+    {(
+      order?.customerName ||
+      order?.name ||
+      'N/A'
+    ).toUpperCase()}
+  </Text>
 
-        <Text style={styles.detailText}>
-          <Text style={styles.detailLabel}>
-            PHONE:
-          </Text>{' '}
-          {order?.phoneNumber || order?.phone}
-        </Text>
+  <Text style={styles.detailText}>
+    <Text style={styles.detailLabel}>
+      PHONE:
+    </Text>{' '}
+    {order?.phoneNumber || order?.phone || 'N/A'}
+  </Text>
 
-        <Text style={styles.detailText}>
-          <Text style={styles.detailLabel}>
-            ADDRESS:
-          </Text>{' '}
-          {order?.address?.toUpperCase()}
-        </Text>
-      </View>
+  <Text style={styles.detailText}>
+    <Text style={styles.detailLabel}>
+      ADDRESS:
+    </Text>{' '}
+    {(order?.address || 'N/A').toUpperCase()}
+  </Text>
+
+  {/* WHATSAPP CONTACT */}
+  <TouchableOpacity
+    disabled={!order?.whatsappNumber}
+    onPress={() =>
+      openWhatsApp(order?.whatsappNumber)
+    }
+    style={{
+      marginTop: 14,
+      backgroundColor: '#25D366',
+      borderRadius: 12,
+      paddingVertical: 13,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+    }}
+  >
+    <Ionicons
+      name="logo-whatsapp"
+      size={19}
+      color="#FFFFFF"
+    />
+
+    <Text
+      style={{
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '800',
+        marginLeft: 8,
+      }}
+    >
+      {order?.whatsappNumber
+        ? `WHATSAPP • ${order.whatsappNumber}`
+        : 'WHATSAPP UNAVAILABLE'}
+    </Text>
+  </TouchableOpacity>
+</View>
 
       {/* 🎯 ITEMS */}
            {/* 🎯 ITEMS CARD WITH INTEGRATED CONFIRM/REJECT CONTROLS */}

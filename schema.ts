@@ -728,48 +728,202 @@ export const orderStatusEnum = pgEnum('order_status', [
 ]);
 
 export const orders = pgTable("orders", {
-  id: uuid("id").primaryKey().defaultRandom(),
- userId: text("user_id")
-  .references(() => user.id)
-  .notNull(),
-  customerName: text("customer_name").notNull(),
-  phoneNumber: text("phone_number").notNull(),
-  address: text("address").notNull(),
-  latitude: decimal("latitude"),
-  longitude: decimal("longitude"),
-  delivererId: uuid("deliverer_id").references(() => deliverers.id),
-   driverLat: text("driver_lat"),
-     shippingFee: text("shipping_fee").default("0").notNull(), 
+  id: uuid("id")
+    .primaryKey()
+    .defaultRandom(),
+
+  userId: text("user_id")
+    .references(() => user.id)
+    .notNull(),
+
+  // =========================================================
+  // CUSTOMER INFORMATION SNAPSHOT
+  // =========================================================
+
+  customerName: text("customer_name")
+    .notNull(),
+
+  phoneNumber: text("phone_number")
+    .notNull(),
+
+  whatsappNumber: text("whatsapp_number")
+    .notNull(),
+
+  address: text("address")
+    .notNull(),
+
+  // =========================================================
+  // DELIVERY / LOGISTICS
+  // =========================================================
+
+  delivererId: uuid("deliverer_id")
+    .references(() => deliverers.id),
+
+  packagerId: uuid("packager_id")
+    .references(() => deliverers.id),
+
+  shippingFee: numeric("shipping_fee", {
+    precision: 10,
+    scale: 2,
+  })
+    .default("0")
+    .notNull(),
+
+  // =========================================================
+  // ORDER PRICING SNAPSHOT
+  // =========================================================
+
+  subtotal: numeric("subtotal", {
+    precision: 10,
+    scale: 2,
+  })
+    .default("0")
+    .notNull(),
+
+  promoDiscount: numeric("promo_discount", {
+    precision: 10,
+    scale: 2,
+  })
+    .default("0")
+    .notNull(),
+
+  newUserDiscount: numeric("new_user_discount", {
+    precision: 10,
+    scale: 2,
+  })
+    .default("0")
+    .notNull(),
+
+  milestoneDiscount: numeric("milestone_discount", {
+    precision: 10,
+    scale: 2,
+  })
+    .default("0")
+    .notNull(),
+
+  promoCode: text("promo_code"),
+
+  totalAmount: numeric("total_amount", {
+    precision: 10,
+    scale: 2,
+  })
+    .notNull(),
+
+  // =========================================================
+  // ORDER STATUS
+  // =========================================================
+
+  status: orderStatusEnum("status")
+    .default("pending"),
+
+  rejectionReason: text("rejection_reason"),
+
+  // =========================================================
+  // REFUND FLOW
+  // =========================================================
+
   refundReason: text("refund_reason"),
-refundAdminNote: text("refund_admin_note"),
-refundProcessedAt: timestamp("refund_processed_at"),
+
+  refundAdminNote: text("refund_admin_note"),
+
+  refundProcessedAt: timestamp("refund_processed_at"),
+
+  // =========================================================
+  // PACKAGING / CANCELLATION TIMESTAMPS
+  // =========================================================
+
+  packagedAt: timestamp("packaged_at"),
+
+  cancelledAt: timestamp("cancelled_at"),
+
+  // =========================================================
+  // DELIVERY DRIVER LIVE LOCATION
+  //
+  // IMPORTANT:
+  // These are NOT customer's checkout GPS coordinates.
+  // They belong to the delivery tracking system.
+  // =========================================================
+
+  driverLat: text("driver_lat"),
 
   driverLng: text("driver_lng"),
+
   lastGpsUpdate: timestamp("last_gps_update"),
-  totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: orderStatusEnum("status").default("pending"),
-  rejectionReason: text("rejection_reason"),
-  createdAt: timestamp("created_at").defaultNow(),
-packagerId: uuid("packager_id")
-  .references(() => deliverers.id),
 
-packagedAt: timestamp("packaged_at"),
+latitude: decimal("latitude", {
+  precision: 10,
+  scale: 7,
+}),
 
-cancelledAt: timestamp("cancelled_at"),
+longitude: decimal("longitude", {
+  precision: 10,
+  scale: 7,
+}),
+  // =========================================================
+  // TIMESTAMPS
+  // =========================================================
 
-updatedAt: timestamp("updated_at")
-  .defaultNow(),
+  createdAt: timestamp("created_at")
+    .defaultNow(),
 
+  updatedAt: timestamp("updated_at")
+    .defaultNow(),
 });
 
 export const orderItems = pgTable("order_items", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("order_id").references(() => orders.id),
-  productId: uuid("product_id").references(() => products.id),
-  quantity: integer("quantity").notNull(),
-  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
-  // ADD THESE IF MISSING:
+  id: uuid("id")
+    .primaryKey()
+    .defaultRandom(),
+
+  orderId: uuid("order_id")
+    .references(() => orders.id)
+    .notNull(),
+
+  productId: uuid("product_id")
+    .references(() => products.id)
+    .notNull(),
+
+  quantity: integer("quantity")
+    .notNull(),
+
+  // =========================================================
+  // COMMERCIAL PRICING SNAPSHOT
+  // =========================================================
+
+  // Original/reference price before the existing discount
+  originalPrice: numeric("original_price", {
+    precision: 10,
+    scale: 2,
+  }),
+
+  // Actual price customer receives
+  price: numeric("price", {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+
+  // Difference between originalPrice and price
+  discountAmount: numeric("discount_amount", {
+    precision: 10,
+    scale: 2,
+  })
+    .default("0")
+    .notNull(),
+
+  // Snapshot of the percentage displayed to customer
+  discountPercentage: numeric("discount_percentage", {
+    precision: 5,
+    scale: 2,
+  })
+    .default("0")
+    .notNull(),
+
+  // =========================================================
+  // PRODUCT VARIANT
+  // =========================================================
+
   selectedSize: text("selected_size"),
+
   selectedColor: text("selected_color"),
 });
 
