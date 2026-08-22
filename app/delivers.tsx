@@ -255,182 +255,390 @@ return (
 }
 
 const styles = StyleSheet.create({
+  // =========================================================
+  // PAGE
+  // =========================================================
+
   container: {
     flex: 1,
-    backgroundColor: "#F7F7F8",
+    backgroundColor: '#F7F7F8',
   },
+
+  // =========================================================
+  // HEADER
+  // =========================================================
 
   header: {
     paddingTop: 60,
-    paddingBottom: 14,
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderColor: "#eee",
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+
+    backgroundColor: '#F7F7F8',
+
+    alignItems: 'flex-start',
   },
 
   headerTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontSize: 18,
+    fontWeight: '900',
+
+    letterSpacing: 1.8,
+
+    textTransform: 'uppercase',
+
+    color: '#111',
   },
+
+  // =========================================================
+  // SCROLL
+  // =========================================================
 
   scrollFormWindow: {
     flex: 1,
   },
 
   scrollContentLayoutContainer: {
-    padding: 18,
-    paddingBottom: 120,
+    paddingHorizontal: 20,
+    paddingBottom: 100,
   },
 
+  // =========================================================
+  // FORM CARD
+  // =========================================================
+
   formCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+
+    padding: 20,
+
+    borderRadius: 18,
+
+    marginBottom: 28,
+
     borderWidth: 1,
-    borderColor: "#eee",
-    marginBottom: 18,
+    borderColor: '#EAEAEA',
+
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+
+    elevation: 2,
   },
 
   formTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-    marginBottom: 14,
+    fontSize: 11,
+
+    fontWeight: '900',
+
+    letterSpacing: 1.5,
+
+    marginBottom: 16,
+
+    textTransform: 'uppercase',
+
+    color: '#111',
   },
+
+  // =========================================================
+  // STANDARD INPUT
+  // =========================================================
 
   input: {
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-    fontWeight: "600",
+    borderBottomWidth: 1,
+
+    borderBottomColor: '#E5E5E5',
+
+    paddingVertical: 11,
+
+    paddingHorizontal: 0,
+
+    marginBottom: 16,
+
+    fontSize: 14,
+
+    fontWeight: '600',
+
+    color: '#111',
+
+    backgroundColor: '#FFFFFF',
   },
+
+  // =========================================================
+  // FIELD LABEL
+  // =========================================================
 
   label: {
-    fontSize: 10,
-    fontWeight: "800",
-    marginBottom: 6,
-    color: "#666",
+    fontSize: 9,
+
+    fontWeight: '900',
+
+    color: '#666',
+
+    letterSpacing: 1,
+
+    marginTop: 6,
+
+    marginBottom: 7,
+
+    textTransform: 'uppercase',
   },
 
+  // =========================================================
+  // VEHICLE / ROLE SEGMENTED CONTROL
+  // =========================================================
+
   vehicleRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
+
     borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 10,
-    overflow: "hidden",
-    marginBottom: 14,
+
+    borderColor: '#E5E5E5',
+
+    borderRadius: 11,
+
+    overflow: 'hidden',
+
+    marginBottom: 18,
+
+    backgroundColor: '#FAFAFA',
   },
 
   vBtn: {
     flex: 1,
-    padding: 10,
-    alignItems: "center",
-    backgroundColor: "#fff",
+
+    minHeight: 42,
+
+    paddingVertical: 10,
+
+    paddingHorizontal: 8,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+
+    backgroundColor: '#FAFAFA',
   },
 
   vBtnActive: {
-    backgroundColor: "#000",
+    backgroundColor: '#111',
   },
 
   vText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#000",
+    fontSize: 9,
+
+    fontWeight: '900',
+
+    letterSpacing: 0.8,
+
+    color: '#111',
+
+    textTransform: 'uppercase',
   },
 
   vTextActive: {
-    color: "#fff",
+    color: '#FFFFFF',
   },
 
-  /* 🔥 FIXED PASSWORD FIELD */
+  // =========================================================
+  // PASSWORD
+  // =========================================================
+
   passwordBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    borderBottomWidth: 1,
+
+    borderBottomColor: '#E5E5E5',
+
     height: 46,
-    marginBottom: 14,
-    backgroundColor: "#fff",
+
+    marginBottom: 20,
+
+    backgroundColor: '#FFFFFF',
   },
 
   passwordInput: {
     flex: 1,
+
     fontSize: 14,
-    fontWeight: "600",
+
+    fontWeight: '600',
+
+    color: '#111',
+
     paddingVertical: 0,
+
+    paddingHorizontal: 0,
   },
 
   eyeBtn: {
-    padding: 6,
+    padding: 8,
+
+    marginRight: -4,
   },
 
+  // =========================================================
+  // PRIMARY SAVE BUTTON
+  // =========================================================
+
   saveBtn: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
+    backgroundColor: '#111',
+
+    minHeight: 48,
+
+    paddingVertical: 14,
+
+    borderRadius: 13,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
   },
 
   saveBtnText: {
-    color: "#fff",
-    fontWeight: "900",
+    color: '#FFFFFF',
+
+    fontWeight: '900',
+
     fontSize: 11,
-    letterSpacing: 1.5,
+
+    letterSpacing: 1.3,
+
+    textTransform: 'uppercase',
   },
+
+  // =========================================================
+  // LIST SECTION
+  // =========================================================
 
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: "900",
-    marginVertical: 12,
-    textAlign: "center",
+    fontSize: 10,
+
+    fontWeight: '900',
+
+    letterSpacing: 1.8,
+
+    marginBottom: 14,
+
+    textTransform: 'uppercase',
+
+    color: '#111',
+
+    textAlign: 'left',
   },
+
+  // =========================================================
+  // DELIVERER CARD
+  // =========================================================
 
   delivererCard: {
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+
+    padding: 18,
+
+    borderRadius: 16,
+
+    marginBottom: 12,
+
+    borderWidth: 1,
+
+    borderColor: '#EAEAEA',
+
+    flexDirection: 'row',
+
+    justifyContent: 'space-between',
+
+    alignItems: 'center',
+
+    shadowColor: '#000',
+
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+
+    shadowOpacity: 0.02,
+
+    shadowRadius: 6,
+
+    elevation: 1,
   },
 
+  // =========================================================
+  // DELIVERER INFORMATION
+  // =========================================================
+
   delInfo: {
-    flexDirection: "row",
-    gap: 10,
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    gap: 12,
+
+    flex: 1,
+
+    paddingRight: 12,
   },
 
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: "#f2f2f2",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 42,
+
+    height: 42,
+
+    borderRadius: 12,
+
+    backgroundColor: '#F3F3F3',
+
+    justifyContent: 'center',
+
+    alignItems: 'center',
   },
 
   avatarText: {
-    fontWeight: "900",
+    fontSize: 14,
+
+    fontWeight: '900',
+
+    color: '#111',
   },
 
   delName: {
-    fontWeight: "800",
+    fontWeight: '900',
+
     fontSize: 13,
+
+    color: '#111',
+
+    marginBottom: 3,
   },
 
   delDetail: {
-    fontSize: 11,
-    color: "#777",
+    fontSize: 10,
+
+    color: '#777',
+
+    fontWeight: '600',
+
+    lineHeight: 16,
   },
 
+  // =========================================================
+  // CARD ACTIONS
+  // =========================================================
+
   cardActionContainerFrame: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    gap: 12,
+
+    paddingLeft: 8,
   },
 });

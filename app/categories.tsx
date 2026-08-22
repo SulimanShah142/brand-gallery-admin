@@ -288,7 +288,12 @@ export default function Categories() {
     </KeyboardAvoidingView>
   );
 }
+
 const styles = StyleSheet.create({
+  // =========================================================
+  // PAGE
+  // =========================================================
+
   container: {
     flex: 1,
     backgroundColor: '#F7F7F8',
@@ -296,23 +301,68 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 80,
+    paddingBottom: 100,
   },
 
   heading: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1.8,
     textTransform: 'uppercase',
     marginTop: 60,
-    marginBottom: 24,
-    color: '#000',
-    textAlign: 'center',
+    marginBottom: 18,
+    color: '#111',
+    textAlign: 'left',
   },
 
-  // =========================
-  // FORM SYSTEM (UNIFIED CARD)
-  // =========================
+  // =========================================================
+  // NAVIGATION
+  // =========================================================
+
+  navRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+
+  navButton: {
+    flex: 1,
+
+    minHeight: 44,
+
+    backgroundColor: '#FFFFFF',
+
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+
+    borderRadius: 12,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.02,
+    shadowRadius: 6,
+
+    elevation: 1,
+  },
+
+  navButtonText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#111',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+
+  // =========================================================
+  // FORM CARD
+  // =========================================================
+
   formCard: {
     backgroundColor: '#FFFFFF',
 
@@ -320,92 +370,34 @@ const styles = StyleSheet.create({
 
     borderRadius: 18,
 
-    marginBottom: 24,
+    marginBottom: 28,
 
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: '#EAEAEA',
 
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
     shadowOpacity: 0.03,
     shadowRadius: 8,
 
     elevation: 2,
   },
-  navRow: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: 10,
-  marginTop: 10,
-},
-
-navButton: {
-  flex: 1,
-  minWidth: "48%",
-  backgroundColor: "#FFFFFF",
-  borderWidth: 1,
-  borderColor: "#EEEEEE",
-  paddingVertical: 14,
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-navButtonText: {
-  fontSize: 10,
-  fontWeight: "900",
-  color: "#000000",
-  letterSpacing: 1,
-  textTransform: "uppercase",
-},
 
   formTitle: {
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.5,
-    marginBottom: 18,
+    marginBottom: 16,
     textTransform: 'uppercase',
     color: '#111',
   },
 
-  // =========================
-  // INPUT SYSTEM (CLEAN LINES)
-  // =========================
-  input: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#EAEAEA',
-
-    paddingVertical: 12,
-
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-
-    marginBottom: 18,
-  },
-
-  multilingualColorRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 6,
-    marginBottom: 10,
-  },
-
-  multilingualInputSubCell: {
-    flex: 1,
-
-    height: 42,
-
-    borderWidth: 1,
-    borderColor: '#EAEAEA',
-
-    backgroundColor: '#FAFAFA',
-
-    paddingHorizontal: 12,
-
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#000',
-  },
+  // =========================================================
+  // FIELD SYSTEM
+  // =========================================================
 
   fieldLabel: {
     fontSize: 9,
@@ -427,57 +419,96 @@ navButtonText: {
     textTransform: 'uppercase',
   },
 
-  // =========================
-  // IMAGE UPLOAD AREA (MODERN TILE)
-  // =========================
+  input: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+
+    paddingVertical: 11,
+
+    fontSize: 14,
+    fontWeight: '600',
+
+    color: '#111',
+
+    marginBottom: 16,
+  },
+
+  multilingualColorRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+
+  multilingualInputSubCell: {
+    flex: 1,
+
+    height: 42,
+
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+
+    backgroundColor: '#FAFAFA',
+
+    paddingHorizontal: 12,
+
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111',
+  },
+
+  // =========================================================
+  // IMAGE UPLOAD
+  // =========================================================
+
   imageInput: {
     height: 180,
 
     backgroundColor: '#FAFAFA',
 
     borderWidth: 1,
-    borderColor: '#EAEAEA',
+    borderColor: '#E5E5E5',
 
-    borderRadius: 16,
+    borderRadius: 14,
 
     justifyContent: 'center',
     alignItems: 'center',
 
-    marginBottom: 20,
-  },
+    marginTop: 6,
+    marginBottom: 18,
 
-  imagePlaceholderText: {
-    fontSize: 11,
-    color: '#999',
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    overflow: 'hidden',
   },
-  itemSubTitleTranslation: {
-  fontSize: 10,
-  color: "#888888",
-  fontWeight: "500",
-  letterSpacing: 0.2,
-  marginTop: 2,
-},
 
   previewImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 16,
+    borderRadius: 14,
   },
 
-  // =========================
-  // PRIMARY ACTION (CONSISTENT BUTTON)
-  // =========================
-  submitButton: {
-    backgroundColor: '#000',
+  imagePlaceholderText: {
+    fontSize: 10,
+    color: '#999',
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
 
-    paddingVertical: 16,
+  // =========================================================
+  // PRIMARY ACTION
+  // =========================================================
+
+  submitButton: {
+    backgroundColor: '#111',
+
+    minHeight: 48,
+
+    paddingVertical: 14,
 
     alignItems: 'center',
+    justifyContent: 'center',
 
-    borderRadius: 14,
+    borderRadius: 13,
   },
 
   submitButtonText: {
@@ -485,21 +516,26 @@ navButtonText: {
 
     fontWeight: '900',
 
-    letterSpacing: 1.5,
+    letterSpacing: 1.3,
 
-    fontSize: 12,
+    fontSize: 11,
+
+    textTransform: 'uppercase',
   },
 
-  // =========================
-  // LIST SYSTEM (CLEAN CARDS)
-  // =========================
+  // =========================================================
+  // CATEGORY LIST
+  // =========================================================
+
   sectionTitle: {
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.8,
-    marginBottom: 20,
+
+    marginBottom: 14,
+
     textTransform: 'uppercase',
-    textAlign: 'center',
+
     color: '#111',
   },
 
@@ -513,25 +549,66 @@ navButtonText: {
     marginBottom: 12,
 
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: '#EAEAEA',
+
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.02,
+    shadowRadius: 6,
+
+    elevation: 1,
   },
+
+  // =========================================================
+  // CATEGORY HEADER
+  // =========================================================
 
   itemTopRow: {
     flexDirection: 'row',
+
     justifyContent: 'space-between',
-    alignItems: 'center',
+
+    alignItems: 'flex-start',
+
     marginBottom: 12,
   },
 
   itemTitle: {
     fontSize: 14,
+
     fontWeight: '900',
-    letterSpacing: 0.3,
+
+    letterSpacing: 0.4,
+
     color: '#111',
+
+    marginBottom: 4,
   },
+
+  itemSubTitleTranslation: {
+    fontSize: 10,
+
+    color: '#888',
+
+    fontWeight: '600',
+
+    letterSpacing: 0.2,
+
+    lineHeight: 15,
+
+    marginTop: 1,
+  },
+
+  // =========================================================
+  // CATEGORY IMAGE
+  // =========================================================
 
   itemImage: {
     width: '100%',
+
     height: 190,
 
     backgroundColor: '#F5F5F5',
@@ -541,39 +618,61 @@ navButtonText: {
     marginBottom: 12,
   },
 
+  // =========================================================
+  // CATEGORY DESCRIPTION
+  // =========================================================
+
   itemText: {
     fontSize: 12,
+
     color: '#666',
+
     lineHeight: 18,
+
     marginBottom: 8,
+
     fontWeight: '500',
   },
 
   itemMeta: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: 9,
+
+    color: '#AAA',
+
     fontWeight: '700',
-    letterSpacing: 0.3,
+
+    letterSpacing: 0.4,
+
+    marginTop: 2,
   },
 
-  // =========================
-  // ACTION BUTTONS (UNIFIED)
-  // =========================
+  // =========================================================
+  // ACTION BUTTONS
+  // =========================================================
+
   actionButtons: {
     flexDirection: 'row',
-    marginTop: 12,
+
+    alignItems: 'center',
+
+    marginTop: 0,
   },
 
   smallButton: {
+    minHeight: 34,
+
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 13,
 
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: '#111',
 
-    borderRadius: 10,
+    borderRadius: 9,
 
-    marginRight: 8,
+    marginLeft: 7,
+
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   deleteButton: {
@@ -581,44 +680,70 @@ navButtonText: {
   },
 
   smallButtonText: {
-    color: '#000',
-    fontSize: 10,
+    color: '#111',
+
+    fontSize: 9,
+
     fontWeight: '900',
+
     letterSpacing: 0.8,
+
+    textTransform: 'uppercase',
   },
 
-  // =========================
-  // LINK ACTION (SOFT CTA)
-  // =========================
+  // =========================================================
+  // LINK ACTION
+  // =========================================================
+
   linkButton: {
     paddingVertical: 12,
+
     alignItems: 'center',
+
     marginTop: 10,
   },
 
   linkText: {
-    color: '#000',
+    color: '#111',
+
     fontWeight: '800',
+
     fontSize: 10,
+
     letterSpacing: 1,
+
     textDecorationLine: 'underline',
   },
 
-  // =========================
-  // EMPTY STATE (CLEAN SYSTEM)
-  // =========================
+  // =========================================================
+  // EMPTY STATE
+  // =========================================================
+
   emptyText: {
     textAlign: 'center',
-    color: '#BBB',
+
+    color: '#AAA',
+
     marginTop: 40,
+
     fontSize: 11,
+
     fontWeight: '600',
+
     letterSpacing: 0.5,
   },
 
+  // =========================================================
+  // GENERAL CENTER
+  // =========================================================
+
   center: {
     flex: 1,
+
     justifyContent: 'center',
+
     alignItems: 'center',
+
+    backgroundColor: '#F7F7F8',
   },
 });
