@@ -50,7 +50,7 @@ export default function AdminProductsPage() {
   // =========================================================
 
   const [editingId, setEditingId] = useState<string | null>(null);
-
+const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [namePs, setNamePs] = useState('');
   const [nameFa, setNameFa] = useState('');
@@ -76,7 +76,16 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
 
-  const [loading, setLoading] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Pagination / incremental loading
+  const [page, setPage] = useState(0);
+  const [limit] = useState(20);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // =========================================================
@@ -169,75 +178,204 @@ export default function AdminProductsPage() {
   // LOAD PRODUCTS / CATEGORIES / SETTINGS
   // =========================================================
 
-  const loadInitialLogisticsConfig = async () => {
-    setLoading(true);
+// =========================================================
+// LOAD SETTINGS
+// =========================================================
 
-    try {
-      const [
-        productsResponse,
-        categoriesResponse,
-        settingsResponse,
-      ] = await Promise.all([
-        fetch(`${API_URL}/api/admin/products`),
-        fetch(`${API_URL}/api/admin/categories`),
-        fetch(`${API_URL}/api/admin/settings`),
-      ]);
+const loadSettings = async () => {
+  try {
+    setSettingsLoading(true);
 
-      if (!productsResponse.ok) {
-        throw new Error('Failed to load products');
-      }
+    const response = await fetch(
+      `${API_URL}/api/admin/settings`
+    );
 
-      if (!categoriesResponse.ok) {
-        throw new Error('Failed to load categories');
-      }
-
-      if (!settingsResponse.ok) {
-        throw new Error('Failed to load settings');
-      }
-
-      const [
-        productsData,
-        categoriesData,
-        settingsData,
-      ] = await Promise.all([
-        productsResponse.json(),
-        categoriesResponse.json(),
-        settingsResponse.json(),
-      ]);
-
-      setProducts(
-        Array.isArray(productsData)
-          ? productsData.filter(isActiveProduct)
-          : []
+    if (!response.ok) {
+      throw new Error(
+        `Settings request failed: ${response.status}`
       );
-
-      setCategories(
-        Array.isArray(categoriesData)
-          ? categoriesData
-          : []
-      );
-
-      setSettings(
-        settingsData || null
-      );
-    } catch (error) {
-      console.error(
-        '❌ Failed to load product administration data:',
-        error
-      );
-
-      Alert.alert(
-        'Connection Failure',
-        'Could not load the product catalog.'
-      );
-    } finally {
-      setLoading(false);
     }
-  };
 
-  useEffect(() => {
-    loadInitialLogisticsConfig();
-  }, []);
+    const data = await response.json();
+
+    setSettings(data || null);
+
+    console.log("✅ Settings loaded");
+  } catch (error) {
+    console.error(
+      "❌ Failed to load settings:",
+      error
+    );
+  } finally {
+    setSettingsLoading(false);
+  }
+};
+
+
+// =========================================================
+// LOAD CATEGORIES
+// =========================================================
+
+const loadCategories = async () => {
+  try {
+    setCategoriesLoading(true);
+
+    const response = await fetch(
+      `${API_URL}/api/admin/categories`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Categories request failed: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+
+    setCategories(
+      Array.isArray(data)
+        ? data
+        : []
+    );
+
+    console.log("✅ Categories loaded");
+  } catch (error) {
+    console.error(
+      "❌ Failed to load categories:",
+      error
+    );
+  } finally {
+    setCategoriesLoading(false);
+  }
+};
+
+const loadProducts = async (reset = false) => {
+  if (
+    productsLoading ||
+    loadingMore
+  ) {
+    return;
+  }
+
+  if (
+    !reset &&
+    !hasMore
+  ) {
+    return;
+  }
+
+  try {
+    if (reset) {
+      setProductsLoading(true);
+      setPage(0);
+      setHasMore(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    const offset =
+      reset
+        ? 0
+        : products.length;
+
+    console.log(
+      `🛍️ Loading products: offset=${offset}, limit=${limit}`
+    );
+
+    const startedAt =
+      Date.now();
+
+    const response =
+      await fetch(
+        `${API_URL}/api/admin/products?limit=${limit}&offset=${offset}`
+      );
+
+    if (!response.ok) {
+      throw new Error(
+        `Products request failed: ${response.status}`
+      );
+    }
+
+    const data =
+      await response.json();
+
+    const incomingProducts =
+      Array.isArray(data?.products)
+        ? data.products.filter(
+            isActiveProduct
+          )
+        : [];
+
+    setProducts(prev => {
+      if (reset) {
+        return incomingProducts;
+      }
+
+      // Prevent accidental duplicates.
+      const existingIds =
+        new Set(
+          prev.map(
+            product => product.id
+          )
+        );
+
+      const newProducts =
+        incomingProducts.filter(
+          product =>
+            !existingIds.has(
+              product.id
+            )
+        );
+
+      return [
+        ...prev,
+        ...newProducts,
+      ];
+    });
+
+    setHasMore(
+      Boolean(data?.hasMore)
+    );
+
+    setPage(prev =>
+      reset
+        ? 1
+        : prev + 1
+    );
+
+    console.log(
+      `✅ Loaded ${incomingProducts.length} products`
+    );
+
+    console.log(
+      `⏱️ Request took ${Date.now() - startedAt}ms`
+    );
+
+  } catch (error) {
+    console.error(
+      '❌ Failed to load products:',
+      error
+    );
+
+    Alert.alert(
+      'Connection Failure',
+      'Could not load the product catalog.'
+    );
+
+  } finally {
+    setProductsLoading(false);
+    setLoadingMore(false);
+  }
+};
+
+useEffect(() => {
+  loadProducts(true);
+}, []);
+
+  // =========================================================
+// LOAD SETTINGS
+// =========================================================
+
 
   // =========================================================
   // PRODUCT SEARCH
@@ -1045,7 +1183,7 @@ const handleSave = async () => {
     //
     // =======================================================
 
-    await loadInitialLogisticsConfig();
+    await loadProducts();
 
     // =======================================================
     // 10. RESET FORM
@@ -1399,7 +1537,7 @@ const handleSave = async () => {
                 );
               }
 
-              await loadInitialLogisticsConfig();
+              await loadProducts();
 
             } catch (error) {
               console.error(
@@ -1424,13 +1562,7 @@ const handleSave = async () => {
 
 
 
-  if (loading && products.length === 0) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
-        <ActivityIndicator size="large" color="#000" />
-      </View>
-    );
-  }
+
 
 // app/products.tsx -> Complete Return Block Layer Segment
 
@@ -1475,6 +1607,12 @@ return (
         contentContainerStyle={{
           paddingBottom: 120,
         }}
+        onEndReached={() => {
+          if (!productsLoading && !loadingMore && hasMore) {
+            loadProducts(false);
+          }
+        }}
+        onEndReachedThreshold={0.6}
 
         ListHeaderComponent={
           <View style={{ padding: 16 }}>
@@ -2672,6 +2810,14 @@ return (
             </View>
 
           </View>
+        }
+
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ padding: 16 }}>
+              <ActivityIndicator />
+            </View>
+          ) : null
         }
 
         renderItem={({ item }) => (
