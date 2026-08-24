@@ -370,6 +370,7 @@ const loadProducts = async (reset = false) => {
 
 useEffect(() => {
   loadProducts(true);
+  loadSettings(true)
 }, []);
 
   // =========================================================
