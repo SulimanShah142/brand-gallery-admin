@@ -3037,18 +3037,10 @@ return (
 {/* ACTIONS */}
 {/* ================================================= */}
 
-<View
-  style={
-    styles.cardButtonsActionArea
-  }
->
-  {/* EDIT */}
-
+<View style={styles.cardButtonsActionArea}>
   <TouchableOpacity
-    style={styles.editBtn}
-    onPress={() =>
-      handleEdit(item)
-    }
+    style={styles.actionButton}
+    onPress={() => handleEdit(item)}
   >
     <Ionicons
       name="pencil-outline"
@@ -3056,69 +3048,29 @@ return (
       color="#000"
     />
 
-    <Text
-      style={
-        styles.editBtnText
-      }
-    >
+    <Text style={styles.editBtnText}>
       EDIT
     </Text>
   </TouchableOpacity>
 
-
-  {/* DIVIDER */}
-
-  <View
-    style={{
-      width: 1,
-      height: 16,
-      backgroundColor: '#E5E5E5',
-      marginHorizontal: 12,
-    }}
+<TouchableOpacity
+  style={styles.actionButton}
+  onPress={() => handleShareProduct(item.id)}
+>
+  <Ionicons
+    name="share-outline"
+    size={14}
+    color="#FFFFFF"
   />
 
-
-  {/* SHARE */}
-
-  <TouchableOpacity
-    style={styles.shareBtn}
-    onPress={() =>
-      handleShareProduct(item)
-    }
-  >
-    <Ionicons
-      name="share-outline"
-      size={14}
-      color="#007AFF"
-    />
-
-    <Text
-      style={styles.shareBtnText}
-    >
-      SHARE
-    </Text>
-  </TouchableOpacity>
-
-
-  {/* DIVIDER */}
-
-  <View
-    style={{
-      width: 1,
-      height: 16,
-      backgroundColor: '#E5E5E5',
-      marginHorizontal: 12,
-    }}
-  />
-
-
-  {/* REMOVE */}
+  <Text style={styles.actionButtonText}>
+    SHARE
+  </Text>
+</TouchableOpacity>
 
   <TouchableOpacity
-    style={styles.deleteBtn}
-    onPress={() =>
-      handleDelete(item.id)
-    }
+    style={styles.actionButton}
+    onPress={() => handleDelete(item.id)}
   >
     <Ionicons
       name="trash-outline"
@@ -3126,11 +3078,7 @@ return (
       color="#FF3B30"
     />
 
-    <Text
-      style={
-        styles.deleteBtnText
-      }
-    >
+    <Text style={styles.deleteBtnText}>
       REMOVE
     </Text>
   </TouchableOpacity>
@@ -3661,7 +3609,25 @@ const styles = StyleSheet.create({
 
     elevation: 1,
   },
+actionButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 36,
+  paddingHorizontal: 14,
+  borderRadius: 10,
+  backgroundColor: '#000000',
+  borderWidth: 1,
+  borderColor: '#000000',
+},
 
+actionButtonText: {
+  marginLeft: 7,
+  fontSize: 11,
+  fontWeight: '800',
+  letterSpacing: 0.5,
+  color: '#FFFFFF',
+},
   // =========================================================
   // PRODUCT IMAGE AREA
   // =========================================================
@@ -3753,20 +3719,7 @@ const styles = StyleSheet.create({
   // PRODUCT ACTIONS
   // =========================================================
 
-  cardButtonsActionArea: {
-    flexDirection: 'row',
 
-    alignItems: 'center',
-
-    gap: 8,
-
-    marginTop: 12,
-
-    paddingTop: 10,
-
-    borderTopWidth: 1,
-    borderTopColor: '#EEEEEF',
-  },
 
   editBtn: {
     flexDirection: 'row',
@@ -3838,6 +3791,13 @@ shareBtnText: {
   fontSize: 12,
   fontWeight: '700',
   color: '#007AFF',
+},
+cardButtonsActionArea: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: 8,
+  width: '100%',
 },
 
 });
