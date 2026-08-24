@@ -83,7 +83,7 @@ const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   // Pagination / incremental loading
   const [page, setPage] = useState(0);
-  const [limit] = useState(20);
+  const [limit] = useState(40);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -370,7 +370,8 @@ const loadProducts = async (reset = false) => {
 
 useEffect(() => {
   loadProducts(true);
-  loadSettings(true)
+  loadCategories()
+
 }, []);
 
   // =========================================================
