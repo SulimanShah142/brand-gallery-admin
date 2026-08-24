@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   FlatList,
   Image,
+    Share,
   StyleSheet,
   ScrollView,
   Alert,
@@ -1490,6 +1491,46 @@ const handleSave = async () => {
   // =====================================================
 
   setLoading(false);
+};
+
+const handleShareProduct = async (item: any) => {
+  try {
+    if (!item?.id) {
+      Alert.alert(
+        'Unable to Share',
+        'This product does not have a valid product ID.'
+      );
+      return;
+    }
+
+    const productUrl =
+      `https://brand-gallery-deep-linking.vercel.app/products/${item.id}`;
+
+    const result = await Share.share({
+      message: productUrl,
+      url: productUrl,
+      title: item.name
+        ? `Brand Gallery — ${item.name}`
+        : 'Brand Gallery Product',
+    });
+
+    if (result.action === Share.sharedAction) {
+      console.log(
+        '✅ Product shared:',
+        productUrl
+      );
+    }
+  } catch (error) {
+    console.error(
+      '❌ Failed to share product:',
+      error
+    );
+
+    Alert.alert(
+      'Share Failed',
+      'Could not share this product.'
+    );
+  }
 };
 
 
@@ -2992,65 +3033,108 @@ return (
               {/* ACTIONS */}
               {/* ================================================= */}
 
-              <View
-                style={
-                  styles.cardButtonsActionArea
-                }
-              >
-                <TouchableOpacity
-                  style={styles.editBtn}
-                  onPress={() =>
-                    handleEdit(item)
-                  }
-                >
-                  <Ionicons
-                    name="pencil-outline"
-                    size={14}
-                    color="#000"
-                  />
+         {/* ================================================= */}
+{/* ACTIONS */}
+{/* ================================================= */}
 
-                  <Text
-                    style={
-                      styles.editBtnText
-                    }
-                  >
-                    EDIT
-                  </Text>
-                </TouchableOpacity>
+<View
+  style={
+    styles.cardButtonsActionArea
+  }
+>
+  {/* EDIT */}
 
-                <View
-                  style={{
-                    width: 1,
-                    height: 16,
-                    backgroundColor:
-                      '#E5E5E5',
-                    marginHorizontal: 12,
-                  }}
-                />
+  <TouchableOpacity
+    style={styles.editBtn}
+    onPress={() =>
+      handleEdit(item)
+    }
+  >
+    <Ionicons
+      name="pencil-outline"
+      size={14}
+      color="#000"
+    />
 
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() =>
-                    handleDelete(
-                      item.id
-                    )
-                  }
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={14}
-                    color="#FF3B30"
-                  />
+    <Text
+      style={
+        styles.editBtnText
+      }
+    >
+      EDIT
+    </Text>
+  </TouchableOpacity>
 
-                  <Text
-                    style={
-                      styles.deleteBtnText
-                    }
-                  >
-                    REMOVE
-                  </Text>
-                </TouchableOpacity>
-              </View>
+
+  {/* DIVIDER */}
+
+  <View
+    style={{
+      width: 1,
+      height: 16,
+      backgroundColor: '#E5E5E5',
+      marginHorizontal: 12,
+    }}
+  />
+
+
+  {/* SHARE */}
+
+  <TouchableOpacity
+    style={styles.shareBtn}
+    onPress={() =>
+      handleShareProduct(item)
+    }
+  >
+    <Ionicons
+      name="share-outline"
+      size={14}
+      color="#007AFF"
+    />
+
+    <Text
+      style={styles.shareBtnText}
+    >
+      SHARE
+    </Text>
+  </TouchableOpacity>
+
+
+  {/* DIVIDER */}
+
+  <View
+    style={{
+      width: 1,
+      height: 16,
+      backgroundColor: '#E5E5E5',
+      marginHorizontal: 12,
+    }}
+  />
+
+
+  {/* REMOVE */}
+
+  <TouchableOpacity
+    style={styles.deleteBtn}
+    onPress={() =>
+      handleDelete(item.id)
+    }
+  >
+    <Ionicons
+      name="trash-outline"
+      size={14}
+      color="#FF3B30"
+    />
+
+    <Text
+      style={
+        styles.deleteBtnText
+      }
+    >
+      REMOVE
+    </Text>
+  </TouchableOpacity>
+</View>
             </View>
           </View>
         )}
@@ -3743,4 +3827,17 @@ const styles = StyleSheet.create({
 
     letterSpacing: 0.5,
   },
+shareBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+shareBtnText: {
+  marginLeft: 5,
+  fontSize: 12,
+  fontWeight: '700',
+  color: '#007AFF',
+},
+
 });
