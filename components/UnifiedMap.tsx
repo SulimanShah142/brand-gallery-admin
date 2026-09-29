@@ -10,6 +10,7 @@ type UnifiedMapProps = {
   driverCoords: [number, number] | null; 
   orderStatus?: string;
   orderId?: string;
+  showMarkers?: boolean;
   isFullscreen?: boolean;
   setIsFullscreen?: (value: boolean) => void;
 };
@@ -21,6 +22,7 @@ export default function UnifiedMap({
   driverCoords,
   orderStatus = 'confirmed',
   orderId,
+  showMarkers = true,
   isFullscreen = false,
   setIsFullscreen
 }: UnifiedMapProps) {
@@ -128,7 +130,7 @@ export default function UnifiedMap({
           }
 
           // Warehouse Marker
-          if (${hasWarehouse}) {
+          if (${showMarkers && hasWarehouse}) {
             L.marker([${whLat}, ${whLng}], {
               icon: createEmojiIcon('🏢')
             }).addTo(map).bindPopup("Store");
@@ -136,7 +138,7 @@ export default function UnifiedMap({
 
           // Destination Marker
           var destMarker = null;
-          if (${hasDest}) {
+          if (${showMarkers && hasDest}) {
             destMarker = L.marker([${destLat}, ${destLng}], {
               icon: createEmojiIcon('📍')
             }).addTo(map);
@@ -147,7 +149,7 @@ export default function UnifiedMap({
           var initialDrvLat = parseFloat('${drvLat || ''}');
           var initialDrvLng = parseFloat('${drvLng || ''}');
 
-          if (${hasDriver} && !isNaN(initialDrvLat) && !isNaN(initialDrvLng)) {
+          if (${showMarkers && hasDriver} && !isNaN(initialDrvLat) && !isNaN(initialDrvLng)) {
             driverMarker = L.marker([initialDrvLat, initialDrvLng], {
               icon: createEmojiIcon('🛵')
             }).addTo(map);
@@ -159,7 +161,7 @@ export default function UnifiedMap({
             
             if (!isNaN(nextLat) && !isNaN(nextLng)) {
               var newPos = [nextLat, nextLng];
-              if (!driverMarker) {
+              if (!driverMarker && ${showMarkers}) {
                 driverMarker = L.marker(newPos, { icon: createEmojiIcon('🛵') }).addTo(map);
               } else {
                 driverMarker.setLatLng(newPos);
@@ -168,7 +170,7 @@ export default function UnifiedMap({
           };
 
           // Interaction (USER Pin Dropping)
-          if ('${role}' === 'USER') {
+          if ('${role}' === 'USER' && ${showMarkers}) {
             map.on('click', function(e) {
               var lat = e.latlng.lat;
               var lng = e.latlng.lng;
@@ -184,7 +186,7 @@ export default function UnifiedMap({
           var rawDestLat = parseFloat('${destLat}');
           var rawDestLng = parseFloat('${destLng}');
 
-          if (!isNaN(rawWhLat) && !isNaN(rawWhLng) && !isNaN(rawDestLat) && !isNaN(rawDestLng)) {
+          if (${showMarkers} && !isNaN(rawWhLat) && !isNaN(rawWhLng) && !isNaN(rawDestLat) && !isNaN(rawDestLng)) {
             var url = 'https://router.project-osrm.org/route/v1/driving/' + 
                       rawWhLng + ',' + rawWhLat + ';' + rawDestLng + ',' + rawDestLat + 
                       '?overview=full&geometries=geojson';
@@ -215,7 +217,7 @@ export default function UnifiedMap({
       </body>
       </html>
     `;
-  }, [role, whLat, whLng, destLat, destLng, drvLat, drvLng, hasDriver, hasWarehouse, hasDest, centerLat, centerLng]);
+  }, [role, whLat, whLng, destLat, destLng, drvLat, drvLng, hasDriver, hasWarehouse, hasDest, centerLat, centerLng, showMarkers]);
   return (
     <View style={[styles.container, activeFullscreen && styles.fullscreenContainer]}>
       

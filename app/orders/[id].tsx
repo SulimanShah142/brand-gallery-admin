@@ -141,6 +141,7 @@ export default function UserOrderDetails() {
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [liveDriverCoords, setLiveDriverCoords] = useState<[number, number] | null>(null);
+  const [userEnabledGps, setUserEnabledGps] = useState(false);
   const [mapFullscreen, setMapFullscreen] = useState(false);
 // Inside your primary Admin Order Details component function header:
 const [rejectionReason, setRejectionReason] = useState("");
@@ -171,6 +172,13 @@ const [reasonText, setReasonText] = useState('');
 
         setOrder(normalizeOrder(orderData));
         setSettings(settingsData);
+
+        setUserEnabledGps(
+          orderData?.latitude != null &&
+          orderData?.longitude != null &&
+          !isNaN(parseFloat(orderData.latitude)) &&
+          !isNaN(parseFloat(orderData.longitude))
+        );
 
         // 🎯 FIX: Verify numeric parameters fields safely to handle text strings out of your Neon table data rows
         if (orderData?.driverLat && orderData?.driverLng) {
@@ -257,7 +265,7 @@ console.log(
   'out_for_delivery'
 ].includes(order?.status);
 
-    if (isLiveTrackingActive) {
+    if (isLiveTrackingActive && userEnabledGps) {
       console.log(`📡 [ADMIN APP] Live tracking loop activated for status: ${order.status === 'refunded'
   ? 'REFUND OPERATION'
   : order.status.replaceAll('_', ' ').toUpperCase().toUpperCase()}`);
@@ -297,7 +305,7 @@ console.log(
         clearInterval(trackingTimer);
       }
     };
-  }, [order?.status, id]); // Closed loop stays tight and stable
+  }, [order?.status, id, userEnabledGps]); // Closed loop stays tight and stable
 
 const updateStatus = async (
   newStatus: string,
@@ -537,6 +545,7 @@ const isRefundJob =
           destinationCoords={customerCoords}
           warehouseCoords={warehouseCoords}
           driverCoords={liveDriverCoords}
+          showMarkers={userEnabledGps}
           isFullscreen={true}
           setIsFullscreen={setMapFullscreen}
         />
@@ -550,10 +559,18 @@ const isRefundJob =
         destinationCoords={customerCoords}
         warehouseCoords={warehouseCoords}
         driverCoords={liveDriverCoords}
+        showMarkers={userEnabledGps}
         isFullscreen={mapFullscreen}
         setIsFullscreen={setMapFullscreen}
       />
     </View>
+
+    {!userEnabledGps && (
+      <View style={styles.gpsDisabledBanner}>
+        <Ionicons name="location-outline" size={18} color="#8A5200" />
+        <Text style={styles.gpsDisabledText}>USER DID NOT ENABLE GPS</Text>
+      </View>
+    )}
     
 
     {/* 🎯 ONLY CONTENT SCROLLS */}
@@ -1439,6 +1456,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F7F7F8',
+  },
+
+  gpsDisabledBanner: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#FFF7E6',
+    borderWidth: 1,
+    borderColor: '#F2C46D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  gpsDisabledText: {
+    color: '#8A5200',
+    fontSize: 12,
+    fontWeight: '800',
   },
 infoBanner: {
   backgroundColor: '#F6F7FB',

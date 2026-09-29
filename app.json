@@ -8,20 +8,27 @@
     "userInterfaceStyle": "automatic",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.jpeg",
+    "owner": "shah-suliman",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.shahsuliman.adminpanel",
+      "softwareKeyboardLayoutMode": "resize",
+      "googleServicesFile": "./google-services.json",
+      "jsEngine": "hermes",
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-icon.jpeg",
         "backgroundColor": "#FFFFFF"
       },
-      "softwareKeyboardLayoutMode": "resize",
-      "package": "com.shahsuliman.adminpanel",
-      "googleServicesFile": "./google-services.json",
-      "jsEngine": "hermes",
-      "edgeToEdgeEnabled": true,
+      "notification": {
+        "icon": "./assets/ic_stat_onesignal_default.png",
+        "color": "#000000"
+      },
       "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
@@ -42,10 +49,11 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/app-icon.jpeg",
+          "image": "./assets/images/splash.png",
           "resizeMode": "cover",
           "backgroundColor": "#ffffff",
           "dark": {
+            "image": "./assets/images/splash.png",
             "backgroundColor": "#000000"
           }
         }
@@ -53,32 +61,35 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-sqlite",
+      "onnxruntime-react-native",
+      "./plugins/with-onnxruntime",
       [
         "onesignal-expo-plugin",
         {
-          "mode": "development"
+          "mode": "production",
+          "smallIcons": [
+            "./assets/ic_stat_onesignal_default.png"
+          ],
+          "smallIconAccentColor": "#000000"
         }
       ],
       "@react-native-community/datetimepicker"
     ],
-    "updates": {
-      "enabled": true,
-      "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/28c9f1fe-02db-4579-bc12-8d4615bb896b"
-    },
     "experiments": {
       "typedRoutes": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "extra": {
       "router": {},
       "oneSignalAppId": "e3d802e0-664f-4952-9c42-7b7effde4866",
       "eas": {
-        "projectId": "28c9f1fe-02db-4579-bc12-8d4615bb896b"
+        "projectId": "a53250b7-ba98-47ea-97e5-397d72b88602"
       }
     },
-    "owner": "slliman",
-    "runtimeVersion": {
-      "policy": "appVersion"
+    "updates": {
+      "url": "https://u.expo.dev/a53250b7-ba98-47ea-97e5-397d72b88602"
     }
   }
 }

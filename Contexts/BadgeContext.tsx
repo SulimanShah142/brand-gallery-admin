@@ -39,6 +39,8 @@ export function BadgeProvider({ children }: { children: React.ReactNode }) {
       if (rawData?.type === 'NEW_ASSIGNMENT_DELIVERER') {
         setDelivererOrdersBadge(prev => prev + 1);
       }
+
+      payload.display();
     };
 
     OneSignal.Notifications.addEventListener('foregroundWillDisplay', handleIncomingNotification);

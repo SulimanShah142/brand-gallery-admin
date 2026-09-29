@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import {
   View,
@@ -17,9 +17,37 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system/legacy';
 import { uploadImage } from '../lib/uploadthing';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '@/lib/config';
+import { generateVisualEmbedding } from '@/lib/visualEmbedding';
+
+const PRODUCT_IMAGE_DIRECTORY = `${FileSystem.documentDirectory}product-images/`;
+
+async function persistProductImage(uri: string, prefix: string): Promise<string> {
+  await FileSystem.makeDirectoryAsync(PRODUCT_IMAGE_DIRECTORY, {
+    intermediates: true,
+  });
+
+  const extension = uri.toLowerCase().includes('.png') ? 'png' : 'jpg';
+  const destination = `${PRODUCT_IMAGE_DIRECTORY}${prefix}-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}.${extension}`;
+
+  await FileSystem.copyAsync({
+    from: uri,
+    to: destination,
+  });
+
+  const info = await FileSystem.getInfoAsync(destination);
+  if (!info.exists || info.isDirectory) {
+    throw new Error('Selected product image could not be persisted locally.');
+  }
+
+  return destination;
+}
+
 // Inside your Admin Products Page file -> Top section before the return block
 export default function AdminProductsPage() {
   const router = useRouter();
@@ -59,6 +87,9 @@ const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState('');
   const [descriptionPs, setDescriptionPs] = useState('');
   const [descriptionFa, setDescriptionFa] = useState('');
+  const [usageInstructions, setUsageInstructions] = useState('');
+  const [usageInstructionsPs, setUsageInstructionsPs] = useState('');
+  const [usageInstructionsFa, setUsageInstructionsFa] = useState('');
 
   const [price, setPrice] = useState('');
   const [profitPercentage, setProfitPercentage] = useState('20');
@@ -88,6 +119,8 @@ const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const productsRequestInFlightRef = useRef(false);
+  const nextProductsOffsetRef = useRef(0);
 
   // =========================================================
   // SIZE SYSTEM
@@ -251,10 +284,7 @@ const loadCategories = async () => {
 };
 
 const loadProducts = async (reset = false) => {
-  if (
-    productsLoading ||
-    loadingMore
-  ) {
+  if (productsRequestInFlightRef.current) {
     return;
   }
 
@@ -265,11 +295,14 @@ const loadProducts = async (reset = false) => {
     return;
   }
 
+  productsRequestInFlightRef.current = true;
+
   try {
     if (reset) {
       setProductsLoading(true);
       setPage(0);
       setHasMore(true);
+      nextProductsOffsetRef.current = 0;
     } else {
       setLoadingMore(true);
     }
@@ -277,7 +310,7 @@ const loadProducts = async (reset = false) => {
     const offset =
       reset
         ? 0
-        : products.length;
+        : nextProductsOffsetRef.current;
 
     console.log(
       `🛍️ Loading products: offset=${offset}, limit=${limit}`
@@ -338,6 +371,9 @@ const loadProducts = async (reset = false) => {
       Boolean(data?.hasMore)
     );
 
+    nextProductsOffsetRef.current =
+      offset + incomingProducts.length;
+
     setPage(prev =>
       reset
         ? 1
@@ -364,6 +400,7 @@ const loadProducts = async (reset = false) => {
     );
 
   } finally {
+    productsRequestInFlightRef.current = false;
     setProductsLoading(false);
     setLoadingMore(false);
   }
@@ -604,7 +641,7 @@ useEffect(() => {
       const result =
         await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
-          quality: 0.8,
+          quality: 1,
         });
 
       if (result.canceled) {
@@ -625,14 +662,14 @@ useEffect(() => {
             },
           ],
           {
-            compress: 0.7,
+            compress: 0.95,
             format:
               ImageManipulator.SaveFormat.JPEG,
           }
         );
 
       setImageUri(
-        manipulated.uri
+        await persistProductImage(manipulated.uri, 'main')
       );
     } catch (error) {
       console.error(
@@ -656,7 +693,7 @@ useEffect(() => {
       const result =
         await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
-          quality: 0.7,
+          quality: 1,
         });
 
       if (result.canceled) {
@@ -677,14 +714,14 @@ useEffect(() => {
             },
           ],
           {
-            compress: 0.6,
+            compress: 0.95,
             format:
               ImageManipulator.SaveFormat.JPEG,
           }
         );
 
       setColorImageUri(
-        manipulated.uri
+        await persistProductImage(manipulated.uri, 'color')
       );
     } catch (error) {
       console.error(
@@ -806,6 +843,9 @@ const resetForm = () => {
   setDescription('');
   setDescriptionPs('');
   setDescriptionFa('');
+  setUsageInstructions('');
+  setUsageInstructionsPs('');
+  setUsageInstructionsFa('');
 
   setPrice('');
   setProfitPercentage('20');
@@ -890,13 +930,11 @@ const handleSave = async () => {
     return;
   }
 
-  if (!categoryId) {
-    Alert.alert(
-      'Validation',
-      'Please select a category.'
-    );
-    return;
-  }
+  // Category selection is intentionally disabled for visual-search cataloging.
+  // if (!categoryId) {
+  //   Alert.alert('Validation', 'Please select a category.');
+  //   return;
+  // }
 
   // Capture this BEFORE doing async work.
   // Otherwise editingId could theoretically change
@@ -911,12 +949,21 @@ const handleSave = async () => {
   setLoading(true);
 
   try {
+    const imageEmbeddings: Array<{
+      imageUrl: string;
+      embedding: number[];
+    }> = [];
+
     // =======================================================
     // 2. MAIN IMAGE
     // =======================================================
 
     let uploadedMainImageUrl =
       imageUri || null;
+
+    const mainEmbedding = imageUri
+      ? await generateVisualEmbedding(imageUri)
+      : null;
 
     if (
       uploadedMainImageUrl &&
@@ -926,6 +973,13 @@ const handleSave = async () => {
         await uploadImage(
           uploadedMainImageUrl
         );
+    }
+
+    if (uploadedMainImageUrl && mainEmbedding) {
+      imageEmbeddings.push({
+        imageUrl: uploadedMainImageUrl,
+        embedding: mainEmbedding,
+      });
     }
 
     // =======================================================
@@ -954,14 +1008,23 @@ const handleSave = async () => {
       let uploadedImage =
         color.imageUrl || null;
 
-      if (
-        color.localImageUri &&
-        !color.localImageUri.startsWith('http')
-      ) {
+      if (color.localImageUri && !color.localImageUri.startsWith('http')) {
+        const colorEmbedding = await generateVisualEmbedding(color.localImageUri);
         uploadedImage =
           await uploadImage(
             color.localImageUri
           );
+
+        imageEmbeddings.push({
+          imageUrl: uploadedImage,
+          embedding: colorEmbedding,
+        });
+      } else if (uploadedImage) {
+        const colorEmbedding = await generateVisualEmbedding(uploadedImage);
+        imageEmbeddings.push({
+          imageUrl: uploadedImage,
+          embedding: colorEmbedding,
+        });
       }
 
       if (!uploadedImage) {
@@ -1064,6 +1127,15 @@ const handleSave = async () => {
       descriptionFa:
         descriptionFa.trim(),
 
+      usageInstructions:
+        usageInstructions.trim(),
+
+      usageInstructionsPs:
+        usageInstructionsPs.trim(),
+
+      usageInstructionsFa:
+        usageInstructionsFa.trim(),
+
       usdPrice:
         parsedPrice,
 
@@ -1074,6 +1146,8 @@ const handleSave = async () => {
 
       imageUrl:
         uploadedMainImageUrl,
+
+      imageEmbeddings,
 
       colors:
         uploadedColors,
@@ -1270,6 +1344,18 @@ const handleSave = async () => {
 
   setDescriptionFa(
     item.descriptionFa || ''
+  );
+
+  setUsageInstructions(
+    item.usageInstructions || ''
+  );
+
+  setUsageInstructionsPs(
+    item.usageInstructionsPs || ''
+  );
+
+  setUsageInstructionsFa(
+    item.usageInstructionsFa || ''
   );
 
 
@@ -1504,7 +1590,7 @@ const handleShareProduct = async (item: any) => {
     }
 
     const productUrl =
-      `https://brand-gallery-deep-linking.vercel.app/products/${item.id}`;
+      `https://brand-gallery-deep-linking.vercel.app/product/${item.id}`;
 
     const result = await Share.share({
       message: productUrl,
@@ -1835,6 +1921,73 @@ return (
               />
 
               {/* ================================================= */}
+              {/* USAGE INSTRUCTIONS */}
+              {/* ================================================= */}
+
+              <Text style={styles.subLabel}>
+                USAGE INSTRUCTIONS
+              </Text>
+
+              <Text style={styles.fieldLabel}>
+                ENGLISH INSTRUCTIONS
+              </Text>
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    height: 90,
+                    textAlignVertical: 'top',
+                  },
+                ]}
+                placeholder="Explain how to use or care for this product..."
+                placeholderTextColor="#AAA"
+                multiline
+                value={usageInstructions}
+                onChangeText={setUsageInstructions}
+              />
+
+              <Text style={styles.fieldLabel}>
+                PASHTO INSTRUCTIONS
+              </Text>
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    height: 90,
+                    textAlign: 'right',
+                    textAlignVertical: 'top',
+                  },
+                ]}
+                placeholder="د کارولو لارښوونې په پښتو کې"
+                placeholderTextColor="#AAA"
+                multiline
+                value={usageInstructionsPs}
+                onChangeText={setUsageInstructionsPs}
+              />
+
+              <Text style={styles.fieldLabel}>
+                DARI INSTRUCTIONS
+              </Text>
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    height: 90,
+                    textAlign: 'right',
+                    textAlignVertical: 'top',
+                  },
+                ]}
+                placeholder="راهنمای استفاده به دری"
+                placeholderTextColor="#AAA"
+                multiline
+                value={usageInstructionsFa}
+                onChangeText={setUsageInstructionsFa}
+              />
+
+              {/* ================================================= */}
               {/* PRICING */}
               {/* ================================================= */}
 
@@ -1908,7 +2061,7 @@ return (
               {/* CATEGORY */}
               {/* ================================================= */}
 
-              <Text style={styles.subLabel}>
+              {/* <Text style={styles.subLabel}>
                 CATEGORY
               </Text>
 
@@ -1950,7 +2103,7 @@ return (
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </ScrollView> */}
 
               {/* ================================================= */}
               {/* MAIN PRODUCT IMAGE */}
@@ -3053,20 +3206,21 @@ return (
     </Text>
   </TouchableOpacity>
 
-<TouchableOpacity
-  style={styles.actionButton}
-  onPress={() => handleShareProduct(item.id)}
->
-  <Ionicons
-    name="share-outline"
-    size={14}
-    color="#FFFFFF"
-  />
+  <TouchableOpacity
+    style={styles.actionButton}
+    onPress={() => handleShareProduct(item)}
+  >
+    <Ionicons
+      name="share-outline"
+      size={14}
+      color="#007AFF"
+    />
 
-  <Text style={styles.actionButtonText}>
-    SHARE
-  </Text>
-</TouchableOpacity>
+    <Text style={styles.shareBtnText}>
+      SHARE
+    </Text>
+  </TouchableOpacity>
+
 
   <TouchableOpacity
     style={styles.actionButton}
@@ -3609,25 +3763,7 @@ const styles = StyleSheet.create({
 
     elevation: 1,
   },
-actionButton: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 36,
-  paddingHorizontal: 14,
-  borderRadius: 10,
-  backgroundColor: '#000000',
-  borderWidth: 1,
-  borderColor: '#000000',
-},
 
-actionButtonText: {
-  marginLeft: 7,
-  fontSize: 11,
-  fontWeight: '800',
-  letterSpacing: 0.5,
-  color: '#FFFFFF',
-},
   // =========================================================
   // PRODUCT IMAGE AREA
   // =========================================================

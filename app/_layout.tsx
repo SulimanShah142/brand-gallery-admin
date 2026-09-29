@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, ActivityIndicator, StyleSheet, TouchableOpacity, InteractionManager } from 'react-native';
 import { useRouter, useSegments, Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,16 +12,17 @@ import { OneSignal } from 'react-native-onesignal';
 import { AuthProvider, useAuth } from '@/Contexts/AuthContext';
 import { BadgeProvider, useBadges } from '@/Contexts/BadgeContext';
 import { initOfflineDb } from '@/lib/offline';
+import { preloadVisualEmbeddingModel } from '@/lib/visualEmbedding';
+import { initOneSignal } from '@/lib/notiifcations';
 
 // Action Sheet Component Ingestion
 import AdminActionSheet from "@/components/UserSheet"; // 🎯 Ensure the filename case matches your path exactly!
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const ADMIN_ONESIGNAL_APP_ID = "e3d802e0-664f-4952-9c42-7b7effde4866"; 
-
 export default function AdminLayout() {
   const [nativeBridgeReady, setNativeBridgeReady] = useState(false);
+  const [oneSignalReady, setOneSignalReady] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -46,12 +47,20 @@ export default function AdminLayout() {
 
     initializeNativeContext();
 
+    initOneSignal()
+      .catch((error) => {
+        console.warn('OneSignal admin initialization failed:', error);
+      })
+      .finally(() => {
+        if (mounted) setOneSignalReady(true);
+      });
+
     return () => {
       mounted = false;
     };
   }, []);
 
-  if (!nativeBridgeReady) {
+  if (!nativeBridgeReady || !oneSignalReady) {
     return (
       <View style={styles.splashContainer}>
         <ActivityIndicator size="small" color="#000000" />
@@ -96,14 +105,15 @@ function AdminLayoutContent() {
       try {
         console.log("⚙️ Booting administrative infrastructure systems...");
 
-        OneSignal.initialize(ADMIN_ONESIGNAL_APP_ID);
-        await OneSignal.Notifications.requestPermission(true).catch(() => false);
-        console.log("🔔 OneSignal Admin Permission State Checked: true");
-
         OneSignal.login("admin_global_channel");
         OneSignal.User.addTag("role", "ADMIN");
         
         await initOfflineDb().catch(() => {});
+        InteractionManager.runAfterInteractions(() => {
+          preloadVisualEmbeddingModel().catch((error) => {
+            console.warn('Admin visual model preload failed:', error);
+          });
+        });
         console.log("✅ Offline Ledger Matrix Tables Sync Checked.");
 
         await new Promise(resolve => setTimeout(resolve, 1200));
