@@ -195,7 +195,7 @@ function AdminLayoutContent() {
         <View style={styles.brandCluster}>
           {/* 🎯 THE RESIZ FIXED IMAGE ASSET BOUNDARY MATRIX */}
           <Image 
-            source={require('@/assets/images/app-icon.jpeg')} 
+            source={require('@/assets/images/splash.png')} 
             style={styles.headerLogoImage}
             resizeMode="contain"
           />
@@ -232,7 +232,7 @@ function AdminLayoutContent() {
     return (
       <View style={styles.splashContainer}>
         <Image 
-          source={require('@/assets/images/splash-image.jpg')} 
+          source={require('@/assets/images/splash.png')} 
           style={styles.splashImage}
           resizeMode="contain"
         />
