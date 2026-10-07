@@ -62,6 +62,7 @@ export default function AdminProductsPage() {
     namePs: string;
     nameFa: string;
     colorCode: string;
+    usdPrice?: string | null;
     imageUrl: string | null;
     localImageUri?: string | null;
     sortOrder?: number;
@@ -70,6 +71,7 @@ export default function AdminProductsPage() {
   type SizeGuideRow = {
     id?: string;
     size: string;
+    usdPrice?: string;
     measurements: Record<string, string>;
     sortOrder?: number;
   };
@@ -488,6 +490,7 @@ useEffect(() => {
       ...prev,
       {
         size,
+        usdPrice: '',
         measurements: {},
         sortOrder: prev.length,
       },
@@ -598,6 +601,8 @@ useEffect(() => {
           dariName || englishName,
 
         colorCode,
+
+        usdPrice: '',
 
         imageUrl: null,
 
@@ -930,6 +935,23 @@ const handleSave = async () => {
     return;
   }
 
+  const hasInvalidVariantPrice = [
+    ...productColors.map(color => color.usdPrice),
+    ...sizeGuideRows.map(row => row.usdPrice),
+  ].some(value => {
+    if (!value?.trim()) return false;
+    const parsed = Number(value);
+    return !Number.isFinite(parsed) || parsed < 0;
+  });
+
+  if (hasInvalidVariantPrice) {
+    Alert.alert(
+      'Validation',
+      'Variant prices must be valid non-negative USD amounts.'
+    );
+    return;
+  }
+
   // Category selection is intentionally disabled for visual-search cataloging.
   // if (!categoryId) {
   //   Alert.alert('Validation', 'Please select a category.');
@@ -1051,6 +1073,11 @@ const handleSave = async () => {
           color.colorCode?.trim() ||
           '',
 
+        usdPrice:
+          color.usdPrice?.trim()
+            ? color.usdPrice.trim()
+            : null,
+
         imageUrl:
           uploadedImage,
 
@@ -1098,6 +1125,11 @@ const handleSave = async () => {
             typeof row.measurements === 'object'
               ? row.measurements
               : {},
+
+          usdPrice:
+            row.usdPrice?.trim()
+              ? Number(row.usdPrice)
+              : null,
 
           sortOrder:
             index,
@@ -1459,6 +1491,11 @@ const handleSave = async () => {
           color.colorCode ||
           '',
 
+        usdPrice:
+          color.usdPrice != null
+            ? String(color.usdPrice)
+            : '',
+
         imageUrl:
           color.imageUrl ||
           null,
@@ -1518,8 +1555,7 @@ const handleSave = async () => {
       : [];
 
 
-  setSizeGuideRows(
-    rows.map(
+  const hydratedSizeRows = rows.map(
       (
         row: any,
         index: number
@@ -1534,6 +1570,11 @@ const handleSave = async () => {
             .trim()
             .toUpperCase(),
 
+        usdPrice:
+          row.usdPrice != null
+            ? String(row.usdPrice)
+            : '',
+
         measurements:
           row.measurements &&
           typeof row.measurements ===
@@ -1545,8 +1586,27 @@ const handleSave = async () => {
           row.sortOrder ??
           index,
       })
+    );
+
+  const missingSizeRows = sizes
+    .filter(
+      (size: string) =>
+        !hydratedSizeRows.some(
+          (row: SizeGuideRow) =>
+            row.size.toLowerCase() === size.toLowerCase()
+        )
     )
-  );
+    .map((size: string, index: number) => ({
+      size,
+      usdPrice: '',
+      measurements: {},
+      sortOrder: hydratedSizeRows.length + index,
+    }));
+
+  setSizeGuideRows([
+    ...hydratedSizeRows,
+    ...missingSizeRows,
+  ]);
 
 
   // =====================================================
@@ -2170,7 +2230,7 @@ return (
                 }}
               >
                 Each color can have its own translations,
-                HEX code and product image.
+                  HEX code, product image and optional USD price.
               </Text>
 
               {/* COLOR NAME */}
@@ -2379,6 +2439,32 @@ return (
                             {color.colorCode ||
                               'NO HEX CODE'}
                           </Text>
+
+                          <TextInput
+                            style={[
+                              styles.input,
+                              {
+                                height: 38,
+                                marginTop: 8,
+                                marginBottom: 0,
+                                paddingHorizontal: 9,
+                                fontSize: 11,
+                              },
+                            ]}
+                            placeholder="USD price override (optional)"
+                            placeholderTextColor="#AAA"
+                            keyboardType="decimal-pad"
+                            value={color.usdPrice || ''}
+                            onChangeText={value =>
+                              setProductColors(current =>
+                                current.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, usdPrice: value }
+                                    : item
+                                )
+                              )
+                            }
+                          />
                         </View>
 
                         {/* REMOVE */}
@@ -2433,6 +2519,10 @@ return (
                 numeric sizes, shoes sizes, etc.
               </Text>
 
+              <Text style={styles.fieldLabel}>
+                OPTIONAL SIZE PRICE OVERRIDE — USD
+              </Text>
+
               <View style={styles.tagInputRow}>
                 <TextInput
                   style={[
@@ -2461,20 +2551,80 @@ return (
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.tagCloud}>
+              <View
+                style={[
+                  styles.tagCloud,
+                  { alignItems: 'center' },
+                ]}
+              >
                 {availableSizes.map(
                   (size, index) => (
-                    <TouchableOpacity
-                      key={`size-${index}`}
-                      onPress={() =>
-                        removeSize(index)
-                      }
-                      style={styles.tag}
+                    <View
+                      key={`size-price-${index}`}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        marginRight: 8,
+                        marginBottom: 8,
+                      }}
                     >
-                      <Text style={styles.tagText}>
-                        {size} ✕
-                      </Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() =>
+                          removeSize(index)
+                        }
+                        style={styles.tag}
+                      >
+                        <Text style={styles.tagText}>
+                          {size} ×
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            width: 112,
+                            height: 38,
+                            marginBottom: 0,
+                            paddingHorizontal: 9,
+                            fontSize: 11,
+                          },
+                        ]}
+                        placeholder="USD price"
+                        placeholderTextColor="#AAA"
+                        keyboardType="decimal-pad"
+                        value={
+                          sizeGuideRows.find(
+                            row => row.size.toLowerCase() === size.toLowerCase()
+                          )?.usdPrice || ''
+                        }
+                        onChangeText={value =>
+                          setSizeGuideRows(current => {
+                            const rowIndex = current.findIndex(
+                              row => row.size.toLowerCase() === size.toLowerCase()
+                            );
+
+                            if (rowIndex < 0) {
+                              return [
+                                ...current,
+                                {
+                                  size,
+                                  usdPrice: value,
+                                  measurements: {},
+                                  sortOrder: current.length,
+                                },
+                              ];
+                            }
+
+                            return current.map((row, currentIndex) =>
+                              currentIndex === rowIndex
+                                ? { ...row, usdPrice: value }
+                                : row
+                            );
+                          })
+                        }
+                      />
+                    </View>
                   )
                 )}
               </View>
