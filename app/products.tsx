@@ -351,13 +351,13 @@ const loadProducts = async (reset = false) => {
       const existingIds =
         new Set(
           prev.map(
-            product => product.id
+            (product: any) => product.id
           )
         );
 
       const newProducts =
         incomingProducts.filter(
-          product =>
+          (product: any) =>
             !existingIds.has(
               product.id
             )
@@ -2390,41 +2390,33 @@ return (
                           `color-${index}`
                         }
                         style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingHorizontal: 10,
-                          paddingVertical: 9,
+                          padding: 10,
                           backgroundColor: '#FFF',
                           borderBottomWidth: index < productColors.length - 1 ? 1 : 0,
                           borderBottomColor: '#EAEAEA',
                         }}
                       >
-                        {/* IMAGE */}
-                        {(color.imageUrl ||
-                          color.localImageUri) && (
-                          <Image
-                            source={{
-                              uri:
-                                color.imageUrl ||
-                                color.localImageUri ||
-                                '',
-                            }}
-                            style={{
-                              width: 52,
-                              height: 52,
-                              borderRadius: 9,
-                              marginRight: 10,
-                            }}
-                          />
-                        )}
-
-                        {/* INFORMATION */}
                         <View
                           style={{
-                            flex: 1,
-                            minWidth: 0,
+                            flexDirection: 'row',
+                            alignItems: 'center',
                           }}
                         >
+                          {(color.imageUrl || color.localImageUri) && (
+                            <Image
+                              source={{
+                                uri: color.imageUrl || color.localImageUri || '',
+                              }}
+                              style={{
+                                width: 52,
+                                height: 52,
+                                borderRadius: 9,
+                                marginRight: 10,
+                              }}
+                            />
+                          )}
+
+                          <View style={{ flex: 1, minWidth: 0 }}>
                           <Text
                             style={{
                               fontSize: 11,
@@ -2456,40 +2448,31 @@ return (
                             {color.colorCode ||
                               'NO HEX CODE'}
                           </Text>
+                          </View>
 
+                          <TouchableOpacity
+                            onPress={() => {
+                              setProductColors(prev =>
+                                prev.filter((_, colorIndex) => colorIndex !== index)
+                              );
+                            }}
+                            style={{
+                              width: 36,
+                              height: 36,
+                              marginLeft: 8,
+                              borderRadius: 9,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#FFF0F0',
+                            }}
+                            accessibilityLabel={`Remove ${color.name} color`}
+                          >
+                            <Ionicons name="trash-outline" size={15} color="#FF3B30" />
+                          </TouchableOpacity>
                         </View>
-
-                        {/* REMOVE */}
-                        <TouchableOpacity
-                          onPress={() => {
-                            setProductColors(
-                              prev =>
-                                prev.filter(
-                                  (_, i) =>
-                                    i !== index
-                                )
-                            );
-                          }}
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 10,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor:
-                              '#FFF0F0',
-                          }}
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={15}
-                            color="#FF3B30"
-                          />
-                        </TouchableOpacity>
 
                         <View
                           style={{
-                            width: '100%',
                             marginTop: 10,
                             paddingTop: 9,
                             borderTopWidth: 1,
@@ -2873,26 +2856,6 @@ return (
                             </Text>
                           </View>
 
-                          <View
-                            style={{
-                              width: 125,
-                              padding: 10,
-                              borderRightWidth: 1,
-                              borderRightColor: '#E5E5E5',
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 9,
-                                fontWeight: '900',
-                                color: '#555',
-                                letterSpacing: 0.5,
-                              }}
-                            >
-                              PRICE (USD)
-                            </Text>
-                          </View>
-
                           {Array.from(
                             new Set(
                               sizeGuideRows.flatMap(
@@ -3038,44 +3001,6 @@ return (
                                   >
                                     {row.size}
                                   </Text>
-                                </View>
-
-                                {/* OPTIONAL SIZE PRICE CELL */}
-
-                                <View
-                                  style={{
-                                    width: 125,
-                                    padding: 6,
-                                    justifyContent: 'center',
-                                    borderRightWidth: 1,
-                                    borderRightColor: '#EEEEEE',
-                                  }}
-                                >
-                                  <TextInput
-                                    style={{
-                                      height: 38,
-                                      borderWidth: 1,
-                                      borderColor: '#EAEAEA',
-                                      borderRadius: 8,
-                                      paddingHorizontal: 8,
-                                      fontSize: 11,
-                                      color: '#000',
-                                      backgroundColor: '#FAFAFA',
-                                    }}
-                                    placeholder="Optional"
-                                    placeholderTextColor="#BBB"
-                                    keyboardType="decimal-pad"
-                                    value={row.usdPrice || ''}
-                                    onChangeText={value => {
-                                      setSizeGuideRows(prev =>
-                                        prev.map((currentRow, currentIndex) =>
-                                          currentIndex === rowIndex
-                                            ? { ...currentRow, usdPrice: value }
-                                            : currentRow
-                                        )
-                                      );
-                                    }}
-                                  />
                                 </View>
 
                                 {/* MEASUREMENT CELLS */}
@@ -4209,6 +4134,16 @@ cardButtonsActionArea: {
   flexWrap: 'wrap',
   gap: 8,
   width: '100%',
+},
+
+actionButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 34,
+  paddingHorizontal: 10,
+  borderRadius: 8,
+  gap: 5,
 },
 
 });
