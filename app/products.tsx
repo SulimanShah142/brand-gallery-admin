@@ -129,6 +129,7 @@ const [loading, setLoading] = useState(false);
   // =========================================================
 
   const [sizeInput, setSizeInput] = useState('');
+  const [sizePriceInput, setSizePriceInput] = useState('');
 
   const [availableSizes, setAvailableSizes] =
     useState<string[]>([]);
@@ -157,6 +158,7 @@ const [loading, setLoading] = useState(false);
   const [colorInputPs, setColorInputPs] = useState('');
   const [colorInputFa, setColorInputFa] = useState('');
   const [colorCodeInput, setColorCodeInput] = useState('');
+  const [colorPriceInput, setColorPriceInput] = useState('');
 
   const [colorImageUri, setColorImageUri] =
     useState<string | null>(null);
@@ -490,13 +492,14 @@ useEffect(() => {
       ...prev,
       {
         size,
-        usdPrice: '',
+        usdPrice: sizePriceInput.trim(),
         measurements: {},
         sortOrder: prev.length,
       },
     ]);
 
     setSizeInput('');
+    setSizePriceInput('');
   };
 
   // =========================================================
@@ -602,7 +605,7 @@ useEffect(() => {
 
         colorCode,
 
-        usdPrice: '',
+        usdPrice: colorPriceInput.trim(),
 
         imageUrl: null,
 
@@ -617,6 +620,7 @@ useEffect(() => {
     setColorInputPs('');
     setColorInputFa('');
     setColorCodeInput('');
+    setColorPriceInput('');
     setColorImageUri(null);
   };
 
@@ -866,11 +870,13 @@ const resetForm = () => {
   setSizeGuideRows([]);
 
   setSizeInput('');
+  setSizePriceInput('');
 
   setColorInput('');
   setColorInputPs('');
   setColorInputFa('');
   setColorCodeInput('');
+  setColorPriceInput('');
   setColorImageUri(null);
 
   setMeasurementNameInput('');
@@ -1614,6 +1620,7 @@ const handleSave = async () => {
   // =====================================================
 
   setSizeInput('');
+  setSizePriceInput('');
 
   setColorInput('');
 
@@ -1622,6 +1629,7 @@ const handleSave = async () => {
   setColorInputFa('');
 
   setColorCodeInput('');
+  setColorPriceInput('');
 
   setColorImageUri(null);
 
@@ -2335,6 +2343,18 @@ return (
                 />
               )}
 
+              <Text style={styles.fieldLabel}>
+                PRICE FOR THIS COLOR — USD, OPTIONAL
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Blank uses the product base price"
+                placeholderTextColor="#AAA"
+                keyboardType="decimal-pad"
+                value={colorPriceInput}
+                onChangeText={setColorPriceInput}
+              />
+
               <TouchableOpacity
                 style={styles.submitBtn}
                 onPress={addColor}
@@ -2354,8 +2374,7 @@ return (
               {/* REGISTERED COLORS */}
               {/* ================================================= */}
 
-              {productColors.length > 0 && (
-                <View
+              <View
                   style={{
                     marginTop: 16,
                     marginBottom: 10,
@@ -2365,6 +2384,32 @@ return (
                     overflow: 'hidden',
                   }}
                 >
+                  <Text
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      backgroundColor: '#F5F5F5',
+                      borderBottomWidth: 1,
+                      borderBottomColor: '#EAEAEA',
+                      fontSize: 10,
+                      fontWeight: '900',
+                      color: '#444',
+                    }}
+                  >
+                    COLOR PRICE OVERRIDES (USD)
+                  </Text>
+                  {productColors.length === 0 ? (
+                    <Text
+                      style={{
+                        padding: 14,
+                        fontSize: 11,
+                        color: '#777',
+                      }}
+                    >
+                      Add a color above to set its own price.
+                    </Text>
+                  ) : (
+                    <>
                   <View
                     style={{
                       flexDirection: 'row',
@@ -2509,8 +2554,9 @@ return (
                       </View>
                     )
                   )}
+                    </>
+                  )}
                 </View>
-              )}
 
               {/* ================================================= */}
               {/* SIZES */}
@@ -2547,6 +2593,23 @@ return (
                   onSubmitEditing={addSize}
                 />
 
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      width: 118,
+                      marginBottom: 0,
+                    },
+                  ]}
+                  placeholder="USD price"
+                  placeholderTextColor="#AAA"
+                  keyboardType="decimal-pad"
+                  value={sizePriceInput}
+                  onChangeText={setSizePriceInput}
+                  onSubmitEditing={addSize}
+                  accessibilityLabel="Optional price for this size in USD"
+                />
+
                 <TouchableOpacity
                   style={styles.addTagBtn}
                   onPress={addSize}
@@ -2573,8 +2636,7 @@ return (
                 )}
               </View>
 
-              {availableSizes.length > 0 && (
-                <View
+              <View
                   style={{
                     marginTop: 12,
                     marginBottom: 8,
@@ -2603,7 +2665,17 @@ return (
                     </Text>
                   </View>
 
-                  {availableSizes.map((size, index) => (
+                  {availableSizes.length === 0 ? (
+                    <Text
+                      style={{
+                        padding: 14,
+                        fontSize: 11,
+                        color: '#777',
+                      }}
+                    >
+                      Add a size above to set its own price.
+                    </Text>
+                  ) : availableSizes.map((size, index) => (
                     <View
                       key={`size-price-${size}-${index}`}
                       style={{
@@ -2677,7 +2749,6 @@ return (
                     </View>
                   ))}
                 </View>
-              )}
 
               {/* ================================================= */}
               {/* DYNAMIC PRODUCT SPECIFICATION TABLE */}
