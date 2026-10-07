@@ -2359,11 +2359,28 @@ return (
                   style={{
                     marginTop: 16,
                     marginBottom: 10,
+                    borderWidth: 1,
+                    borderColor: '#EAEAEA',
+                    borderRadius: 10,
+                    overflow: 'hidden',
                   }}
                 >
-                  <Text style={styles.fieldLabel}>
-                    REGISTERED COLORS
-                  </Text>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      backgroundColor: '#F5F5F5',
+                      borderBottomWidth: 1,
+                      borderBottomColor: '#EAEAEA',
+                    }}
+                  >
+                    <Text style={[styles.fieldLabel, { flex: 1, marginBottom: 0 }]}>
+                      COLOR
+                    </Text>
+                    <View style={{ width: 34 }} />
+                  </View>
 
                   {productColors.map(
                     (color, index) => (
@@ -2375,12 +2392,11 @@ return (
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
-                          padding: 10,
-                          backgroundColor: '#FAFAFA',
-                          borderWidth: 1,
-                          borderColor: '#EAEAEA',
-                          borderRadius: 12,
-                          marginBottom: 8,
+                          paddingHorizontal: 10,
+                          paddingVertical: 9,
+                          backgroundColor: '#FFF',
+                          borderBottomWidth: index < productColors.length - 1 ? 1 : 0,
+                          borderBottomColor: '#EAEAEA',
                         }}
                       >
                         {/* IMAGE */}
@@ -2406,6 +2422,7 @@ return (
                         <View
                           style={{
                             flex: 1,
+                            minWidth: 0,
                           }}
                         >
                           <Text
@@ -2440,31 +2457,6 @@ return (
                               'NO HEX CODE'}
                           </Text>
 
-                          <TextInput
-                            style={[
-                              styles.input,
-                              {
-                                height: 38,
-                                marginTop: 8,
-                                marginBottom: 0,
-                                paddingHorizontal: 9,
-                                fontSize: 11,
-                              },
-                            ]}
-                            placeholder="USD price override (optional)"
-                            placeholderTextColor="#AAA"
-                            keyboardType="decimal-pad"
-                            value={color.usdPrice || ''}
-                            onChangeText={value =>
-                              setProductColors(current =>
-                                current.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, usdPrice: value }
-                                    : item
-                                )
-                              )
-                            }
-                          />
                         </View>
 
                         {/* REMOVE */}
@@ -2494,6 +2486,43 @@ return (
                             color="#FF3B30"
                           />
                         </TouchableOpacity>
+
+                        <View
+                          style={{
+                            width: '100%',
+                            marginTop: 10,
+                            paddingTop: 9,
+                            borderTopWidth: 1,
+                            borderTopColor: '#F0F0F0',
+                          }}
+                        >
+                          <Text style={[styles.fieldLabel, { marginBottom: 5 }]}>
+                            {color.name} PRICE (USD, OPTIONAL)
+                          </Text>
+                          <TextInput
+                            style={[
+                              styles.input,
+                              {
+                                height: 42,
+                                minHeight: 42,
+                                marginBottom: 0,
+                              },
+                            ]}
+                            placeholder="Leave blank to use the product price"
+                            placeholderTextColor="#AAA"
+                            keyboardType="decimal-pad"
+                            value={color.usdPrice || ''}
+                            onChangeText={value =>
+                              setProductColors(current =>
+                                current.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, usdPrice: value }
+                                    : item
+                                )
+                              )
+                            }
+                          />
+                        </View>
                       </View>
                     )
                   )}
@@ -2517,10 +2546,6 @@ return (
               >
                 Add any sizing system: S, M, L, XL,
                 numeric sizes, shoes sizes, etc.
-              </Text>
-
-              <Text style={styles.fieldLabel}>
-                OPTIONAL SIZE PRICE OVERRIDE — USD
               </Text>
 
               <View style={styles.tagInputRow}>
@@ -2551,48 +2576,90 @@ return (
                 </TouchableOpacity>
               </View>
 
-              <View
-                style={[
-                  styles.tagCloud,
-                  { alignItems: 'center' },
-                ]}
-              >
+              <View style={styles.tagCloud}>
                 {availableSizes.map(
                   (size, index) => (
+                    <TouchableOpacity
+                      key={`size-${index}`}
+                      onPress={() => removeSize(index)}
+                      style={styles.tag}
+                    >
+                      <Text style={styles.tagText}>{size} ×</Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+
+              {availableSizes.length > 0 && (
+                <View
+                  style={{
+                    marginTop: 12,
+                    marginBottom: 8,
+                    borderWidth: 1,
+                    borderColor: '#E5E5E5',
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      backgroundColor: '#F5F5F5',
+                      borderBottomWidth: 1,
+                      borderBottomColor: '#E5E5E5',
+                    }}
+                  >
+                    <Text style={[styles.fieldLabel, { flex: 1, marginBottom: 0 }]}>
+                      SIZE
+                    </Text>
+                    <Text style={[styles.fieldLabel, { width: 150, marginBottom: 0 }]}>
+                      PRICE (USD, OPTIONAL)
+                    </Text>
+                  </View>
+
+                  {availableSizes.map((size, index) => (
                     <View
-                      key={`size-price-${index}`}
+                      key={`size-price-${size}-${index}`}
                       style={{
+                        minHeight: 58,
                         flexDirection: 'row',
                         alignItems: 'center',
-                        marginRight: 8,
-                        marginBottom: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        backgroundColor: '#FFF',
+                        borderBottomWidth: index < availableSizes.length - 1 ? 1 : 0,
+                        borderBottomColor: '#EAEAEA',
                       }}
                     >
-                      <TouchableOpacity
-                        onPress={() =>
-                          removeSize(index)
-                        }
-                        style={styles.tag}
+                      <Text
+                        style={{
+                          flex: 1,
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: '#222',
+                        }}
                       >
-                        <Text style={styles.tagText}>
-                          {size} ×
-                        </Text>
-                      </TouchableOpacity>
-
+                        {size}
+                      </Text>
                       <TextInput
-                        style={[
-                          styles.input,
-                          {
-                            width: 112,
-                            height: 38,
-                            marginBottom: 0,
-                            paddingHorizontal: 9,
-                            fontSize: 11,
-                          },
-                        ]}
-                        placeholder="USD price"
+                        style={{
+                          width: 142,
+                          height: 40,
+                          borderWidth: 1,
+                          borderColor: '#E1E1E3',
+                          borderRadius: 8,
+                          paddingHorizontal: 10,
+                          fontSize: 12,
+                          color: '#111',
+                          backgroundColor: '#FAFAFA',
+                        }}
+                        placeholder="Product price"
                         placeholderTextColor="#AAA"
                         keyboardType="decimal-pad"
+                        accessibilityLabel={`${size} optional price in USD`}
                         value={
                           sizeGuideRows.find(
                             row => row.size.toLowerCase() === size.toLowerCase()
@@ -2625,9 +2692,9 @@ return (
                         }
                       />
                     </View>
-                  )
-                )}
-              </View>
+                  ))}
+                </View>
+              )}
 
               {/* ================================================= */}
               {/* DYNAMIC PRODUCT SPECIFICATION TABLE */}
@@ -2806,6 +2873,26 @@ return (
                             </Text>
                           </View>
 
+                          <View
+                            style={{
+                              width: 125,
+                              padding: 10,
+                              borderRightWidth: 1,
+                              borderRightColor: '#E5E5E5',
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 9,
+                                fontWeight: '900',
+                                color: '#555',
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              PRICE (USD)
+                            </Text>
+                          </View>
+
                           {Array.from(
                             new Set(
                               sizeGuideRows.flatMap(
@@ -2951,6 +3038,44 @@ return (
                                   >
                                     {row.size}
                                   </Text>
+                                </View>
+
+                                {/* OPTIONAL SIZE PRICE CELL */}
+
+                                <View
+                                  style={{
+                                    width: 125,
+                                    padding: 6,
+                                    justifyContent: 'center',
+                                    borderRightWidth: 1,
+                                    borderRightColor: '#EEEEEE',
+                                  }}
+                                >
+                                  <TextInput
+                                    style={{
+                                      height: 38,
+                                      borderWidth: 1,
+                                      borderColor: '#EAEAEA',
+                                      borderRadius: 8,
+                                      paddingHorizontal: 8,
+                                      fontSize: 11,
+                                      color: '#000',
+                                      backgroundColor: '#FAFAFA',
+                                    }}
+                                    placeholder="Optional"
+                                    placeholderTextColor="#BBB"
+                                    keyboardType="decimal-pad"
+                                    value={row.usdPrice || ''}
+                                    onChangeText={value => {
+                                      setSizeGuideRows(prev =>
+                                        prev.map((currentRow, currentIndex) =>
+                                          currentIndex === rowIndex
+                                            ? { ...currentRow, usdPrice: value }
+                                            : currentRow
+                                        )
+                                      );
+                                    }}
+                                  />
                                 </View>
 
                                 {/* MEASUREMENT CELLS */}
