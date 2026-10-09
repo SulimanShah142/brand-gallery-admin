@@ -88,17 +88,9 @@ const saveAdvertisement = async () => {
       throw new Error(errorBody?.error || "Failed to save advertisement");
     }
 
-    const savedAdvertisement = await res.json();
-
-    const successMessage = isEditing ? "Advertisement updated" : "Advertisement created";
-    const notification = savedAdvertisement?.notification;
     Alert.alert(
-      notification?.accepted === false ? successMessage : "Success",
-      notification?.accepted === false
-        ? `${successMessage}, but the notification was not sent: ${notification.error || "Unknown delivery error"}`
-        : notification?.accepted
-          ? `${successMessage}. ${notification.recipientCount == null ? "Push notification accepted by OneSignal." : `Push notification sent to ${notification.recipientCount} subscribed devices.`}${notification.failedUsers ? ` ${notification.failedUsers} users had no subscribed device or could not be reached.` : ""}`
-          : successMessage
+      "Success",
+      isEditing ? "Advertisement updated" : "Advertisement created"
     );
 
     resetForm();
