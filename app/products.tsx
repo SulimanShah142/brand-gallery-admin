@@ -958,11 +958,10 @@ const handleSave = async () => {
     return;
   }
 
-  // Category selection is intentionally disabled for visual-search cataloging.
-  // if (!categoryId) {
-  //   Alert.alert('Validation', 'Please select a category.');
-  //   return;
-  // }
+  if (!categoryId) {
+    Alert.alert('Validation', 'Please select a category.');
+    return;
+  }
 
   // Capture this BEFORE doing async work.
   // Otherwise editingId could theoretically change
@@ -2129,7 +2128,7 @@ return (
               {/* CATEGORY */}
               {/* ================================================= */}
 
-              {/* <Text style={styles.subLabel}>
+              <Text style={styles.subLabel}>
                 CATEGORY
               </Text>
 
@@ -2137,41 +2136,53 @@ return (
                 SELECT PRODUCT CATEGORY *
               </Text>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{
-                  paddingVertical: 4,
-                  paddingBottom: 12,
-                }}
-              >
-                {categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[
-                      styles.catPickChip,
-                      categoryId === cat.id &&
-                        styles.catPickChipActive,
-                      {
-                        marginRight: 8,
-                      },
-                    ]}
-                    onPress={() =>
-                      setCategoryId(cat.id)
-                    }
-                  >
-                    <Text
+              {categoriesLoading ? (
+                <ActivityIndicator
+                  color="#111111"
+                  style={{ alignSelf: 'flex-start', marginVertical: 12 }}
+                />
+              ) : categories.length === 0 ? (
+                <Text style={{ color: '#777', fontSize: 12, marginBottom: 12 }}>
+                  No categories found. Create a category first.
+                </Text>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
+                    paddingVertical: 4,
+                    paddingBottom: 12,
+                  }}
+                >
+                  {categories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
                       style={[
-                        styles.catChipText,
+                        styles.catPickChip,
                         categoryId === cat.id &&
-                          styles.catChipTextActive,
+                          styles.catPickChipActive,
+                        {
+                          marginRight: 8,
+                        },
                       ]}
+                      onPress={() => setCategoryId(cat.id)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: categoryId === cat.id }}
+                      accessibilityLabel={`Select ${cat.name} category`}
                     >
-                      {cat.name?.toUpperCase()}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView> */}
+                      <Text
+                        style={[
+                          styles.catChipText,
+                          categoryId === cat.id &&
+                            styles.catChipTextActive,
+                        ]}
+                      >
+                        {cat.name?.toUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
 
               {/* ================================================= */}
               {/* MAIN PRODUCT IMAGE */}
