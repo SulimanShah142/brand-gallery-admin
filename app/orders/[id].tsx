@@ -155,6 +155,7 @@ const [reasonType, setReasonType] = useState<
 >('refund');
 
 const [reasonText, setReasonText] = useState('');
+  const [openingChat, setOpeningChat] = useState(false);
   // 2. Parallel Resource Fetch Initializer
   // 1. DATA SEEDING INITIALIZER: Parallel Resource Data Fetch Engine
   useEffect(() => {
@@ -375,6 +376,43 @@ const updateStatus = async (
     );
   } finally {
     setStatusSubmitting(false);
+  }
+};
+
+const openOrderChat = async () => {
+  if (!order?.userId) {
+    Alert.alert('Chat unavailable', 'This order is not linked to a customer account.');
+    return;
+  }
+
+  setOpeningChat(true);
+  try {
+    const response = await fetch(`${API_URL}/api/conversations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: String(order.userId) }),
+    });
+    const conversation = await response.json();
+    if (!response.ok || !conversation?.id) {
+      throw new Error(conversation?.error || 'Could not open customer conversation');
+    }
+
+    const firstItem = order.items?.[0];
+    router.push({
+      pathname: '/chat/[id]',
+      params: {
+        id: String(conversation.id),
+        conversationId: String(conversation.id),
+        userName: String(order.customerName || order.name || 'Customer'),
+        orderId: String(order.id),
+        orderItemName: String(firstItem?.productName || firstItem?.name || ''),
+        orderImageUrl: String(firstItem?.productImage || firstItem?.imageUrl || ''),
+      },
+    });
+  } catch (error) {
+    Alert.alert('Chat unavailable', error instanceof Error ? error.message : 'Could not open customer conversation');
+  } finally {
+    setOpeningChat(false);
   }
 };
 
@@ -730,6 +768,27 @@ const isRefundJob =
       {order?.whatsappNumber
         ? `WHATSAPP • ${order.whatsappNumber}`
         : 'WHATSAPP UNAVAILABLE'}
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    disabled={openingChat}
+    onPress={openOrderChat}
+    style={{
+      marginTop: 10,
+      backgroundColor: '#111111',
+      borderRadius: 12,
+      paddingVertical: 13,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      opacity: openingChat ? 0.65 : 1,
+    }}
+  >
+    {openingChat ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />}
+    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginLeft: 8 }}>
+      {openingChat ? 'OPENING CHAT...' : 'CHAT WITH USER'}
     </Text>
   </TouchableOpacity>
 </View>

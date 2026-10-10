@@ -24,6 +24,7 @@ export default function AdminChatSession() {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const orderContextSentRef = useRef<string | null>(null);
    
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
@@ -47,6 +48,9 @@ export default function AdminChatSession() {
   }, [params.id, params.conversationId]);
 
   const paramUserName = params.userName;
+  const orderIdParam = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+  const orderItemNameParam = Array.isArray(params.orderItemName) ? params.orderItemName[0] : params.orderItemName;
+  const orderImageUrlParam = Array.isArray(params.orderImageUrl) ? params.orderImageUrl[0] : params.orderImageUrl;
 
   useEffect(() => {
     if (paramUserName && typeof paramUserName === 'string') {
@@ -154,6 +158,59 @@ export default function AdminChatSession() {
       clearInterval(pollingInterval);
     };
   }, [trueActiveConversationId, refreshMessages, isSending]); // Tracks trueActiveConversationId exclusively
+
+  useEffect(() => {
+    const orderId = String(orderIdParam || '').trim();
+    if (!trueActiveConversationId || !orderId) return;
+
+    const contextKey = `${trueActiveConversationId}:${orderId}`;
+    if (orderContextSentRef.current === contextKey) return;
+    orderContextSentRef.current = contextKey;
+
+    const ensureOrderReference = async () => {
+      try {
+        const existingResponse = await fetch(`${API_URL}/api/conversations/${trueActiveConversationId}/messages`);
+        const existingMessages = existingResponse.ok ? await existingResponse.json() : [];
+        const marker = `Order reference: ${orderId}`;
+        if (Array.isArray(existingMessages) && existingMessages.some((message: any) => String(message.content || '').includes(marker))) return;
+
+        const content = `${marker}${orderItemNameParam ? `\nItem: ${orderItemNameParam}` : ''}`;
+        const createdAt = new Date().toISOString();
+        const messageId = Crypto.randomUUID();
+        const response = await fetch(`${API_URL}/api/conversations/${trueActiveConversationId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: messageId,
+            conversationId: trueActiveConversationId,
+            senderId: 'admin',
+            content,
+            attachmentUrl: String(orderImageUrlParam || '').trim() || null,
+            createdAt,
+            isAdminOrigin: true,
+          }),
+        });
+        if (!response.ok) throw new Error('Order reference message was rejected');
+
+        await addLocalMessage({
+          id: messageId,
+          conversationId: trueActiveConversationId,
+          senderId: 'admin',
+          content,
+          attachmentUrl: String(orderImageUrlParam || '').trim() || null,
+          isRead: 1,
+          isSyncedToServer: 1,
+          createdAt,
+        }).catch(() => {});
+        await refreshMessages();
+      } catch (error) {
+        orderContextSentRef.current = null;
+        console.warn('Could not add order reference to chat:', error);
+      }
+    };
+
+    void ensureOrderReference();
+  }, [trueActiveConversationId, orderIdParam, orderImageUrlParam, orderItemNameParam, refreshMessages]);
 
   // =========================================================================
   // 🎯 THE SYMMETRICAL DISPATCH FIX:
@@ -279,6 +336,21 @@ export default function AdminChatSession() {
           <Ionicons name="ellipsis-vertical" size={20} color="#000" />
         </TouchableOpacity>
       </View>
+
+      {!!orderIdParam && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F5F5F5', borderBottomWidth: 1, borderBottomColor: '#E8E8E8' }}>
+          {orderImageUrlParam ? (
+            <Image source={{ uri: String(orderImageUrlParam) }} style={{ width: 42, height: 42, borderRadius: 4, backgroundColor: '#E5E5E5' }} />
+          ) : (
+            <Ionicons name="cube-outline" size={28} color="#555" />
+          )}
+          <View style={{ marginLeft: 10, flex: 1 }}>
+            <Text style={{ color: '#666', fontSize: 10, fontWeight: '700' }}>ORDER REFERENCE</Text>
+            <Text style={{ color: '#111', fontSize: 12, fontWeight: '800' }} numberOfLines={1}>#{String(orderIdParam)}</Text>
+            {!!orderItemNameParam && <Text style={{ color: '#666', fontSize: 11 }} numberOfLines={1}>{String(orderItemNameParam)}</Text>}
+          </View>
+        </View>
+      )}
 
       {historyLoading && (
         <View style={styles.loaderOverlay}>
