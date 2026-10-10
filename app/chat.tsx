@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo , useRef} from 'react';
 import { 
   View, Text, FlatList, TouchableOpacity, StyleSheet, 
-  ActivityIndicator, RefreshControl, Platform 
+  ActivityIndicator, RefreshControl, Platform, TextInput 
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,10 +18,12 @@ const getAvatarBgColor = (name: string) => {
 
 export default function AdminChatList() {
   const [conversations, setConversations] = useState<any[]>([]);
-    const [expandedChats, setExpandedChats] = useState<string[]>([]);
   const [showAllContacts, setShowAllContacts] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [conversationFilter, setConversationFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
   const router = useRouter();
  const isNavigatingRef = useRef(false);
 const lastTapRef = useRef(0);
@@ -116,6 +118,27 @@ const whatsappSortedConversations = useMemo(() => {
   });
 }, [conversations]);
 
+const filteredConversations = useMemo(() => {
+  const query = searchQuery.trim().toLocaleLowerCase();
+
+  return whatsappSortedConversations.filter((conversation: any) => {
+    const unreadCount = Number(conversation.unreadCount ?? conversation.unreadcount ?? 0);
+    if (conversationFilter === 'unread' && unreadCount === 0) return false;
+    if (conversationFilter === 'read' && unreadCount > 0) return false;
+    if (!query) return true;
+
+    const searchableFields = [
+      conversation.userName,
+      conversation.username,
+      conversation.userEmail,
+      conversation.phoneNumber,
+      conversation.lastMessage,
+      conversation.lastmessage,
+    ];
+    return searchableFields.some((value) => String(value || '').toLocaleLowerCase().includes(query));
+  });
+}, [whatsappSortedConversations, searchQuery, conversationFilter]);
+
 
 
 
@@ -125,12 +148,8 @@ const renderItem = ({ item }: { item: any }) => {
   const targetConvId =
     item.conversationId || item.conversation_id || item.id;
 
-  const isExpanded = expandedChats.includes(String(targetConvId));
-
   const unreadCountValue = Number(
-    item.unreadCount ??
-    item.unreadcount ??
-    0
+    item.unreadCount ?? item.unreadcount ?? 0
   );
 
   const isUnreadActive =
@@ -140,6 +159,7 @@ const renderItem = ({ item }: { item: any }) => {
     item.userName ||
     item.username ||
     "Guest Customer";
+  const customerContact = item.phoneNumber || item.userEmail || '';
 
   const avatarLetter =
     customerNameString.charAt(0).toUpperCase();
@@ -220,8 +240,9 @@ if (rawTimestamp) {
 
       // 🚀 NAVIGATE IMMEDIATELY
       router.push({
-        pathname: `/chat/${targetConvId}`,
+        pathname: '/chat/[id]',
         params: {
+          id: String(targetConvId),
           userName: customerNameString,
           conversationId: targetConvId,
         },
@@ -279,6 +300,12 @@ if (rawTimestamp) {
           </Text>
 
         </View>
+
+        {!!customerContact && (
+          <Text style={styles.contact} numberOfLines={1}>
+            {customerContact}
+          </Text>
+        )}
 
           <View style={styles.chatFooterRow}>
             <Text
@@ -342,13 +369,53 @@ if (rawTimestamp) {
 
   const VISIBLE_COUNT = 8;
 
-  const displayedConversations = showAllContacts
-    ? whatsappSortedConversations
-    : whatsappSortedConversations.slice(0, VISIBLE_COUNT);
+  const hasActiveSearchOrFilter = Boolean(searchQuery.trim()) || conversationFilter !== 'all';
+  const displayedConversations = showAllContacts || hasActiveSearchOrFilter
+    ? filteredConversations
+    : filteredConversations.slice(0, VISIBLE_COUNT);
 
   return (
     <View style={styles.container}>
       <Text style={[styles.header]}>CUSTOMER MESSAGES</Text>
+      <View style={styles.searchBox}>
+        <Ionicons name="search-outline" size={18} color="#777777" />
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search name, email, phone, or message"
+          placeholderTextColor="#999999"
+          style={styles.searchInput}
+          autoCapitalize="none"
+          returnKeyType="search"
+          accessibilityLabel="Search customer conversations"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear conversation search">
+            <Ionicons name="close-circle" size={18} color="#888888" />
+          </TouchableOpacity>
+        )}
+      </View>
+      <View style={styles.filterRow}>
+        {([
+          ['all', 'All'],
+          ['unread', 'Unread'],
+          ['read', 'Read'],
+        ] as const).map(([filter, label]) => (
+          <TouchableOpacity
+            key={filter}
+            onPress={() => {
+              setConversationFilter(filter);
+              setShowAllContacts(false);
+            }}
+            style={[styles.filterButton, conversationFilter === filter && styles.filterButtonActive]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: conversationFilter === filter }}
+          >
+            <Text style={[styles.filterButtonText, conversationFilter === filter && styles.filterButtonTextActive]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+        <Text style={styles.resultCount}>{filteredConversations.length}</Text>
+      </View>
       <FlatList
         data={displayedConversations}
     keyExtractor={(item) =>
@@ -367,11 +434,15 @@ if (rawTimestamp) {
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Ionicons name="chatbox-outline" size={36} color="#CCCCCC" />
-            <Text style={styles.emptyText}>No active conversations registered inside server tables.</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery.trim() || conversationFilter !== 'all'
+                ? 'No conversations match your search or filter.'
+                : 'No customer conversations found.'}
+            </Text>
           </View>
         }
         ListFooterComponent={
-          whatsappSortedConversations.length > VISIBLE_COUNT ? (
+          !hasActiveSearchOrFilter && filteredConversations.length > VISIBLE_COUNT ? (
             <View style={styles.footerShowMore}>
               <TouchableOpacity
                 onPress={() => setShowAllContacts(prev => !prev)}
@@ -407,6 +478,58 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 22,
+  },
+  searchBox: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 13,
+    marginBottom: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E1E1E1',
+    backgroundColor: '#FFFFFF',
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    color: '#111111',
+    fontSize: 13,
+    paddingVertical: 10,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterButton: {
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 13,
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    borderRadius: 7,
+    backgroundColor: '#FFFFFF',
+  },
+  filterButtonActive: {
+    backgroundColor: '#111111',
+    borderColor: '#111111',
+  },
+  filterButtonText: {
+    color: '#555555',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  resultCount: {
+    marginLeft: 'auto',
+    color: '#777777',
+    fontSize: 12,
+    fontWeight: '700',
   },
   listContent: {
     paddingBottom: 40,
@@ -475,6 +598,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#111111',
     letterSpacing: 0.1,
+  },
+  contact: {
+    color: '#777777',
+    fontSize: 11,
+    marginBottom: 5,
   },
   time: {
     fontSize: 10,
