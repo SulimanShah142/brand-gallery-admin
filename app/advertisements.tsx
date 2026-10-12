@@ -551,6 +551,7 @@ return (
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.categoryFilters}
+        contentContainerStyle={styles.categoryFiltersContent}
       >
         <TouchableOpacity
           style={[
@@ -560,6 +561,7 @@ return (
           onPress={() => setSelectedCategoryId("")}
         >
           <Text
+            numberOfLines={1}
             style={[
               styles.categoryFilterText,
               !selectedCategoryId && styles.categoryFilterTextSelected,
@@ -581,6 +583,7 @@ return (
               onPress={() => setSelectedCategoryId(category.id)}
             >
               <Text
+                numberOfLines={1}
                 style={[
                   styles.categoryFilterText,
                   isSelected && styles.categoryFilterTextSelected,
@@ -598,7 +601,10 @@ return (
       )}
 
       {/* PRODUCT LIST */}
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.productList}
+        showsVerticalScrollIndicator={false}
+      >
         {filteredProducts.length > 0 ? filteredProducts.map((p) => (
           <TouchableOpacity
             key={p.id}
@@ -725,13 +731,17 @@ modalOverlay: {
 
   backgroundColor: "rgba(0,0,0,0.5)",
   justifyContent: "center",
+  alignItems: "center",
   padding: 20,
 },
 
 modalContainer: {
+  width: "100%",
+  maxWidth: 560,
+  height: "80%",
+  maxHeight: "85%",
   backgroundColor: "#fff",
   borderRadius: 18,
-  maxHeight: "80%",
   padding: 14,
 },
 
@@ -759,16 +769,26 @@ productSearchInput: {
 },
 
 categoryFilters: {
+  height: 42,
   flexGrow: 0,
+  flexShrink: 0,
   marginBottom: 8,
 },
 
+categoryFiltersContent: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingRight: 4,
+},
+
 categoryFilter: {
+  flexShrink: 0,
   borderWidth: 1,
   borderColor: "#ddd",
   borderRadius: 16,
   paddingHorizontal: 12,
-  paddingVertical: 7,
+  minHeight: 32,
+  justifyContent: "center",
   marginRight: 8,
 },
 
@@ -781,6 +801,7 @@ categoryFilterText: {
   color: "#333",
   fontSize: 12,
   fontWeight: "700",
+  flexShrink: 0,
 },
 
 categoryFilterTextSelected: {
@@ -798,6 +819,11 @@ emptyProducts: {
   fontSize: 13,
   paddingVertical: 18,
   textAlign: "center",
+},
+
+productList: {
+  flex: 1,
+  minHeight: 0,
 },
 
 modalClose: {
