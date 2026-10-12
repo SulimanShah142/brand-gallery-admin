@@ -17,6 +17,7 @@ import { API_URL } from '@/lib/config';
 
 const Advertisements = () => {
 const [products, setProducts] = useState<any[]>([]);
+const [categories, setCategories] = useState<any[]>([]);
 const [ads, setAds] = useState<any[]>([]);
 const [selectedProduct, setSelectedProduct] = useState<any>(null);
 const [editingAd, setEditingAd] = useState<any>(null);
@@ -32,6 +33,9 @@ const [sortOrder, setSortOrder] = useState("0");
 
 const [saving, setSaving] = useState(false);
 const [productModalVisible, setProductModalVisible] = useState(false);
+const [productSearch, setProductSearch] = useState("");
+const [selectedCategoryId, setSelectedCategoryId] = useState("");
+const [categoriesLoading, setCategoriesLoading] = useState(false);
 
 const loadData = async () => {
   try {
@@ -52,6 +56,52 @@ setProducts(Array.isArray(productsData) ? productsData : []);
 useEffect(() => {
   loadData();
 }, []);
+
+const openProductModal = async () => {
+  setProductSearch("");
+  setSelectedCategoryId("");
+  setProductModalVisible(true);
+
+  if (categories.length > 0) {
+    return;
+  }
+
+  try {
+    setCategoriesLoading(true);
+    const response = await fetch(`${API_URL}/api/admin/categories`);
+
+    if (!response.ok) {
+      throw new Error(`Categories request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    setCategories(Array.isArray(data) ? data : []);
+  } catch (error) {
+    console.error("Failed to load categories for product selector:", error);
+    Alert.alert("Error", "Unable to load product categories.");
+  } finally {
+    setCategoriesLoading(false);
+  }
+};
+
+const filteredProducts = products.filter((product) => {
+  const matchesCategory =
+    !selectedCategoryId || product.categoryId === selectedCategoryId;
+  const category = categories.find((item) => item.id === product.categoryId);
+  const searchContent = [
+    ...Object.values(product),
+    category?.name,
+    category?.namePs,
+    category?.nameFa,
+  ]
+    .filter((value) => typeof value === "string" || typeof value === "number")
+    .join(" ")
+    .toLocaleLowerCase();
+  const matchesSearch = searchContent.includes(productSearch.trim().toLocaleLowerCase());
+
+  return matchesCategory && matchesSearch;
+});
+
 const saveAdvertisement = async () => {
   if (!selectedProduct?.id) return;
 
@@ -272,7 +322,7 @@ return (
         </Text>
 <TouchableOpacity
   style={styles.productSelector}
-  onPress={() => setProductModalVisible(true)}
+  onPress={openProductModal}
 >
   <Text style={styles.productSelectorText}>
     {selectedProduct
@@ -488,9 +538,68 @@ return (
         </TouchableOpacity>
       </View>
 
+      <TextInput
+        style={styles.productSearchInput}
+        placeholder="Search products..."
+        value={productSearch}
+        onChangeText={setProductSearch}
+        autoCapitalize="none"
+        clearButtonMode="while-editing"
+      />
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoryFilters}
+      >
+        <TouchableOpacity
+          style={[
+            styles.categoryFilter,
+            !selectedCategoryId && styles.categoryFilterSelected,
+          ]}
+          onPress={() => setSelectedCategoryId("")}
+        >
+          <Text
+            style={[
+              styles.categoryFilterText,
+              !selectedCategoryId && styles.categoryFilterTextSelected,
+            ]}
+          >
+            All categories
+          </Text>
+        </TouchableOpacity>
+        {categories.map((category) => {
+          const isSelected = selectedCategoryId === category.id;
+
+          return (
+            <TouchableOpacity
+              key={category.id}
+              style={[
+                styles.categoryFilter,
+                isSelected && styles.categoryFilterSelected,
+              ]}
+              onPress={() => setSelectedCategoryId(category.id)}
+            >
+              <Text
+                style={[
+                  styles.categoryFilterText,
+                  isSelected && styles.categoryFilterTextSelected,
+                ]}
+              >
+                {category.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {categoriesLoading && (
+        <Text style={styles.categoryLoading}>Loading categories...</Text>
+      )}
+
       {/* PRODUCT LIST */}
       <ScrollView showsVerticalScrollIndicator={false}>
-        {products.map((p) => (
+        {filteredProducts.length > 0 ? filteredProducts.map((p) => (
           <TouchableOpacity
             key={p.id}
             style={styles.productItem}
@@ -514,7 +623,9 @@ return (
               </Text>
             </View>
           </TouchableOpacity>
-        ))}
+        )) : (
+          <Text style={styles.emptyProducts}>No products match your filters.</Text>
+        )}
       </ScrollView>
     </View>
   </View>
@@ -636,6 +747,59 @@ modalTitle: {
   fontWeight: "900",
 },
 
+productSearchInput: {
+  borderWidth: 1,
+  borderColor: "#eee",
+  borderRadius: 10,
+  backgroundColor: "#fff",
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  marginBottom: 10,
+  fontSize: 13,
+},
+
+categoryFilters: {
+  flexGrow: 0,
+  marginBottom: 8,
+},
+
+categoryFilter: {
+  borderWidth: 1,
+  borderColor: "#ddd",
+  borderRadius: 16,
+  paddingHorizontal: 12,
+  paddingVertical: 7,
+  marginRight: 8,
+},
+
+categoryFilterSelected: {
+  backgroundColor: "#111",
+  borderColor: "#111",
+},
+
+categoryFilterText: {
+  color: "#333",
+  fontSize: 12,
+  fontWeight: "700",
+},
+
+categoryFilterTextSelected: {
+  color: "#fff",
+},
+
+categoryLoading: {
+  color: "#666",
+  fontSize: 12,
+  marginBottom: 8,
+},
+
+emptyProducts: {
+  color: "#666",
+  fontSize: 13,
+  paddingVertical: 18,
+  textAlign: "center",
+},
+
 modalClose: {
   fontSize: 18,
   fontWeight: "900",
@@ -654,6 +818,18 @@ productThumb: {
   height: 50,
   borderRadius: 10,
   marginRight: 10,
+},
+
+productName: {
+  fontSize: 13,
+  fontWeight: "800",
+  color: "#111",
+},
+
+productPrice: {
+  fontSize: 12,
+  color: "#666",
+  marginTop: 4,
 },
 
 actionRow: {
