@@ -791,6 +791,8 @@ const normalizeOrders = useCallback((payload: any): Order[] => {
 
     const firstItem = items[0] ?? {};
     const productName = firstItem.productName || firstItem.name || o.productName || o.product || "-";
+    const shipping = Number(o.shippingFee ?? o.shipping ?? 0);
+    const orderTotal = Number(o.totalAmount ?? o.total ?? 0);
 
     return {
       id: String(o.id ?? Date.now()),
@@ -803,8 +805,8 @@ const normalizeOrders = useCallback((payload: any): Order[] => {
       items,
       qty,
       status: String(o.status ?? "pending").toLowerCase(),
-      shipping: Number(o.shippingFee ?? o.shipping ?? 0),
-      total: Number(o.totalAmount ?? o.total ?? 0),
+      shipping,
+      total: Math.max(0, orderTotal - shipping),
       paymentMethod: o.paymentMethod ?? o.payment_method ?? o.paymentType ?? "N/A",
     } as Order;
   });
