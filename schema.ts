@@ -603,6 +603,8 @@ export const productColors = pgTable(
     // Example: #000000
     colorCode: text("color_code"),
 
+    usdPrice: numeric("usd_price", { precision: 10, scale: 2 }),
+
     // ======================================================
     // IMAGE FOR THIS SPECIFIC COLOR
     // ======================================================
@@ -951,6 +953,8 @@ export const productSizeGuideRows = pgTable(
 
     size: text("size")
       .notNull(),
+
+    usdPrice: numeric("usd_price", { precision: 10, scale: 2 }),
 
     measurements: jsonb("measurements")
       .notNull()

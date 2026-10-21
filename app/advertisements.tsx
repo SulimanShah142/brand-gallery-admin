@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  Modal,
   KeyboardAvoidingView,
   Platform
 } from "react-native";
@@ -36,6 +37,10 @@ const [productModalVisible, setProductModalVisible] = useState(false);
 const [productSearch, setProductSearch] = useState("");
 const [selectedCategoryId, setSelectedCategoryId] = useState("");
 const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+const closeProductModal = () => {
+  setProductModalVisible(false);
+};
 
 const loadData = async () => {
   try {
@@ -521,7 +526,13 @@ return (
 ))}
     </ScrollView>
   </View>
-  {productModalVisible && (
+  <Modal
+    visible={productModalVisible}
+    transparent
+    animationType="fade"
+    presentationStyle="overFullScreen"
+    onRequestClose={closeProductModal}
+  >
   <View style={styles.modalOverlay}>
     <View style={styles.modalContainer}>
 
@@ -532,7 +543,9 @@ return (
         </Text>
 
         <TouchableOpacity
-          onPress={() => setProductModalVisible(false)}
+          onPress={closeProductModal}
+          accessibilityRole="button"
+          accessibilityLabel="Close product selector"
         >
           <Text style={styles.modalClose}>✕</Text>
         </TouchableOpacity>
@@ -611,7 +624,7 @@ return (
             style={styles.productItem}
             onPress={() => {
               setSelectedProduct(p);
-              setProductModalVisible(false);
+              closeProductModal();
             }}
           >
             <Image
@@ -635,7 +648,7 @@ return (
       </ScrollView>
     </View>
   </View>
-)}
+  </Modal>
   </KeyboardAvoidingView>
 )}
 
