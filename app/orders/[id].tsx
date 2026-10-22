@@ -808,9 +808,16 @@ const isRefundJob =
             />
 
             <View style={{ flex: 1, marginLeft: 15 }}>
-              <Text style={styles.itemName}>
-                {item.productName || item.name}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 }}>
+                <Text style={styles.itemName}>
+                  {item.productName || item.name}
+                </Text>
+                {item.isGift ? (
+                  <View style={{ backgroundColor: '#DCFCE7', borderRadius: 5, paddingHorizontal: 7, paddingVertical: 3 }}>
+                    <Text style={{ color: '#166534', fontSize: 10, fontWeight: '900' }}>FREE GIFT</Text>
+                  </View>
+                ) : null}
+              </View>
 
               <Text style={styles.itemMeta}>
                 QTY: {item.quantity} | SIZE:{' '}
@@ -822,6 +829,11 @@ const isRefundJob =
                   {(item.selectedColor || item.color || 'N/A').toUpperCase()}
                 </Text>
               </Text>
+              {item.isGift ? (
+                <Text style={{ color: '#166534', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
+                  Included free with this qualifying order
+                </Text>
+              ) : null}
             </View>
 
             <Text style={styles.price}>

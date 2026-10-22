@@ -1322,6 +1322,8 @@ export const orderItems = pgTable("order_items", {
   selectedSize: text("selected_size"),
 
   selectedColor: text("selected_color"),
+
+  isGift: boolean("is_gift").default(false).notNull(),
 });
 
 export const discountCodes = pgTable("discount_codes", {

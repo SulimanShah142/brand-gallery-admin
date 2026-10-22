@@ -332,6 +332,15 @@ const isRefundState = refundStates.includes(rawStatus);
         <Text style={styles.amount}>
           TOTAL: AFN {Math.round(item.totalAmount || 0).toLocaleString()}
         </Text>
+        {item.items?.filter((orderItem: any) => orderItem.isGift).map((giftItem: any) => (
+          <Text
+            key={`gift-${giftItem.id}`}
+            style={{ color: '#166534', fontSize: 11, fontWeight: '800', marginTop: 5 }}
+            numberOfLines={1}
+          >
+            FREE GIFT: {giftItem.name || giftItem.productName}
+          </Text>
+        ))}
       </TouchableOpacity>
 
       <View style={styles.actionArea}>
