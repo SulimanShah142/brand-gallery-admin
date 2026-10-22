@@ -19,9 +19,16 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [addressInput, setAddressInput] = useState('');
   const [promoCodes, setPromoCodes] = useState<any[]>([]);
   const [giftProducts, setGiftProducts] = useState<any[]>([]);
+  const [giftCategories, setGiftCategories] = useState<any[]>([]);
+  const [giftCategoriesError, setGiftCategoriesError] = useState('');
   const [giftProductsLoading, setGiftProductsLoading] = useState(false);
+  const [giftProductsLoadingMore, setGiftProductsLoadingMore] = useState(false);
+  const [giftProductsPage, setGiftProductsPage] = useState(0);
+  const [giftProductsHasMore, setGiftProductsHasMore] = useState(false);
   const [giftProductsError, setGiftProductsError] = useState('');
   const [giftProductId, setGiftProductId] = useState('');
+  const [giftProductSearch, setGiftProductSearch] = useState('');
+  const [giftProductCategoryId, setGiftProductCategoryId] = useState('');
   
   const [newCode, setNewCode] = useState({
     code: '',
@@ -54,6 +61,27 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
   const selectedGiftProduct = giftProducts.find(
     (product) => product.id === giftProductId
   );
+  const giftProductCategories = useMemo(() => {
+    const productCategoryIds = new Set(
+      giftProducts.map((product) => String(product.categoryId || '')).filter(Boolean)
+    );
+    return giftCategories.filter((category) =>
+      productCategoryIds.has(String(category.id))
+    );
+  }, [giftCategories, giftProducts]);
+  const filteredGiftProducts = useMemo(() => {
+    const query = giftProductSearch.trim().toLocaleLowerCase();
+    return giftProducts.filter((product) => {
+      const matchesCategory =
+        !giftProductCategoryId ||
+        String(product.categoryId || '') === giftProductCategoryId;
+      const matchesSearch =
+        !query ||
+        [product.name, product.namePs, product.nameFa, product.description]
+          .some((value) => String(value || '').toLocaleLowerCase().includes(query));
+      return matchesCategory && matchesSearch;
+    });
+  }, [giftProducts, giftProductCategoryId, giftProductSearch]);
   // 🎯 THE PROMO CODE SUBMISSION LEDGER CONTROLLER
   const [promoLoading, setPromoLoading] = useState(false);
 
@@ -107,49 +135,80 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
     }
   };
 
-  const loadGiftProducts = async () => {
-    setGiftProductsLoading(true);
+  const loadGiftProducts = async (page = 1) => {
+    if (page === 1) {
+      setGiftProductsLoading(true);
+      setGiftProductsPage(0);
+      setGiftProductsHasMore(false);
+      setGiftProducts([]);
+    } else {
+      setGiftProductsLoadingMore(true);
+    }
     setGiftProductsError('');
     try {
-      const products: any[] = [];
-      let page = 1;
       const pageSize = 50;
-      let hasMore = true;
-
-      while (hasMore) {
-        const response = await fetch(
-          `${API_URL}/api/products?limit=${pageSize}&page=${page}`
-        );
-        if (!response.ok) {
-          throw new Error(`Product catalog request failed: ${response.status}`);
-        }
-
-        const batch = await response.json();
-        if (!Array.isArray(batch)) {
-          throw new Error('Product catalog returned an invalid response.');
-        }
-
-        products.push(...batch);
-        hasMore = batch.length === pageSize;
-        page += 1;
+      const response = await fetch(
+        `${API_URL}/api/products?limit=${pageSize}&page=${page}`
+      );
+      if (!response.ok) {
+        throw new Error(`Product catalog request failed: ${response.status}`);
       }
 
-      const availableProducts = products.filter(
+      const batch = await response.json();
+      if (!Array.isArray(batch)) {
+        throw new Error('Product catalog returned an invalid response.');
+      }
+
+      const availableProducts = batch.filter(
         (product) =>
           product?.isAvailable === true
       );
-      setGiftProducts(availableProducts);
-      setGiftProductId((currentId) =>
-        availableProducts.some((product) => String(product.id) === currentId)
-          ? currentId
-          : ''
-      );
+      setGiftProducts((currentProducts) => {
+        const nextProducts = page === 1 ? [] : currentProducts;
+        const knownIds = new Set(nextProducts.map((product) => String(product.id)));
+        return [
+          ...nextProducts,
+          ...availableProducts.filter((product) => !knownIds.has(String(product.id))),
+        ];
+      });
+      setGiftProductsPage(page);
+      setGiftProductsHasMore(batch.length === pageSize);
     } catch (error) {
       console.error('Failed to load gift products:', error);
       setGiftProductsError('Could not load available products. Please try again.');
     } finally {
-      setGiftProductsLoading(false);
+      if (page === 1) {
+        setGiftProductsLoading(false);
+      } else {
+        setGiftProductsLoadingMore(false);
+      }
     }
+  };
+
+  const loadGiftCategories = async () => {
+    setGiftCategoriesError('');
+    try {
+      const response = await fetch(`${API_URL}/api/categories`);
+      if (!response.ok) {
+        throw new Error(`Category request failed: ${response.status}`);
+      }
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error('Category catalog returned an invalid response.');
+      }
+      setGiftCategories(data);
+    } catch (error) {
+      console.error('Failed to load gift product categories:', error);
+      setGiftCategoriesError('Categories could not be loaded. Product search is still available.');
+    }
+  };
+
+  const openGiftProductPicker = () => {
+    setGiftModalVisible(true);
+    setGiftProductSearch('');
+    setGiftProductCategoryId('');
+    void loadGiftProducts();
+    void loadGiftCategories();
   };
 
     
@@ -560,8 +619,7 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
               style={[styles.switcherBtn, form.rewardType === 'gift' && styles.switcherBtnActive]}
               onPress={() => {
                 setForm({ ...form, rewardType: 'gift' });
-                setGiftModalVisible(true);
-                void loadGiftProducts();
+                openGiftProductPicker();
               }}
             >
               <Text style={[styles.switcherBtnText, form.rewardType === 'gift' && styles.switcherBtnTextActive]}>FREE GIFT PRODUCT</Text>
@@ -571,10 +629,7 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
           {form.rewardType === 'gift' ? (
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => {
-                setGiftModalVisible(true);
-                void loadGiftProducts();
-              }}
+              onPress={openGiftProductPicker}
               style={{
                 marginTop: 14,
                 minHeight: 76,
@@ -880,25 +935,123 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
               <Ionicons name="close" size={26} color="#111" />
             </TouchableOpacity>
           </View>
-          {giftProductsLoading ? (
+          {giftProductsLoading && giftProducts.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
               <ActivityIndicator color="#111" />
               <Text style={{ color: '#666', fontSize: 12 }}>Loading available products...</Text>
             </View>
-          ) : giftProductsError ? (
+          ) : giftProductsError && giftProducts.length === 0 ? (
             <View style={{ padding: 24, alignItems: 'center', gap: 12 }}>
               <Text style={{ color: '#A11', textAlign: 'center' }}>{giftProductsError}</Text>
               <TouchableOpacity onPress={() => void loadGiftProducts()} style={styles.saveMainBtn}>
                 <Text style={styles.saveMainBtnText}>TRY AGAIN</Text>
               </TouchableOpacity>
             </View>
-          ) : giftProducts.length === 0 ? (
+          ) : giftProducts.length === 0 && !giftProductsLoading ? (
             <View style={{ padding: 24, alignItems: 'center' }}>
               <Text style={{ color: '#666', textAlign: 'center' }}>There are no available products to use as a gift.</Text>
             </View>
           ) : (
-            <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
-              {giftProducts.map((product) => {
+            <View style={{ flex: 1 }}>
+              <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+                <View style={{
+                  minHeight: 46,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingHorizontal: 12,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                  backgroundColor: '#FFF',
+                }}>
+                  <Ionicons name="search-outline" size={18} color="#777" />
+                  <TextInput
+                    value={giftProductSearch}
+                    onChangeText={setGiftProductSearch}
+                    placeholder="Search products..."
+                    placeholderTextColor="#999"
+                    returnKeyType="search"
+                    style={{ flex: 1, paddingVertical: 10, color: '#111', fontSize: 14 }}
+                    accessibilityLabel="Search gift products"
+                  />
+                  {giftProductSearch.length > 0 ? (
+                    <TouchableOpacity
+                      onPress={() => setGiftProductSearch('')}
+                      accessibilityLabel="Clear product search"
+                    >
+                      <Ionicons name="close-circle" size={20} color="#888" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 8, paddingVertical: 12 }}
+                >
+                  {[
+                    { id: '', name: 'All categories' },
+                    ...giftProductCategories,
+                  ].map((category) => {
+                    const categoryId = String(category.id || '');
+                    const selected = giftProductCategoryId === categoryId;
+                    return (
+                      <TouchableOpacity
+                        key={categoryId || 'all'}
+                        onPress={() => setGiftProductCategoryId(categoryId)}
+                        accessibilityState={{ selected }}
+                        style={{
+                          paddingHorizontal: 14,
+                          paddingVertical: 9,
+                          borderRadius: 20,
+                          backgroundColor: selected ? '#111' : '#FFF',
+                          borderWidth: 1,
+                          borderColor: selected ? '#111' : '#E5E5E5',
+                        }}
+                      >
+                        <Text style={{
+                          color: selected ? '#FFF' : '#444',
+                          fontSize: 12,
+                          fontWeight: '600',
+                        }}>
+                          {category.name || 'Uncategorized'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                {giftCategoriesError ? (
+                  <Text style={{ color: '#8A5A00', fontSize: 12, marginBottom: 8 }}>
+                    {giftCategoriesError}
+                  </Text>
+                ) : null}
+                <Text style={{ color: '#777', fontSize: 12, marginBottom: 8 }}>
+                  {filteredGiftProducts.length} {filteredGiftProducts.length === 1 ? 'product' : 'products'}
+                  {giftProductsHasMore ? ' · Load more to search additional products' : ''}
+                </Text>
+              </View>
+              <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, gap: 10 }}>
+              {giftProductsError ? (
+                <Text style={{ color: '#A11', textAlign: 'center' }}>{giftProductsError}</Text>
+              ) : null}
+              {filteredGiftProducts.length === 0 ? (
+                <View style={{ paddingVertical: 28, alignItems: 'center', gap: 12 }}>
+                  <Text style={{ color: '#666', textAlign: 'center' }}>
+                    No products match your search or category.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setGiftProductSearch('');
+                      setGiftProductCategoryId('');
+                    }}
+                  >
+                    <Text style={{ color: '#111', fontWeight: '700', textDecorationLine: 'underline' }}>
+                      Clear search and filter
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              {filteredGiftProducts.map((product) => {
                 const selected = product.id === giftProductId;
                 return (
                   <TouchableOpacity
@@ -936,7 +1089,21 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
                   </TouchableOpacity>
                 );
               })}
-            </ScrollView>
+              {giftProductsHasMore || giftProductsLoadingMore ? (
+                <TouchableOpacity
+                  disabled={giftProductsLoadingMore}
+                  onPress={() => void loadGiftProducts(giftProductsPage + 1)}
+                  style={[styles.saveMainBtn, { marginHorizontal: 0, marginBottom: 12 }]}
+                >
+                  {giftProductsLoadingMore ? (
+                    <ActivityIndicator color="#FFF" />
+                  ) : (
+                    <Text style={styles.saveMainBtnText}>LOAD MORE PRODUCTS</Text>
+                  )}
+                </TouchableOpacity>
+              ) : null}
+              </ScrollView>
+            </View>
           )}
         </View>
       </Modal>
