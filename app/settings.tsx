@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Platform, KeyboardAvoidingView, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Platform, KeyboardAvoidingView, Alert, Modal, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import UnifiedMap from '@/components/UnifiedMap';
 import { API_URL } from '@/lib/config';
 const LOCATION_IQ_TOKEN = "pk.ac03476010699238dcadcb4f0eb9a998";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function AdminSettings() {
   const router = useRouter();
 const [mapModalVisible , setMapModalVisible] = useState(false);
+const [giftModalVisible, setGiftModalVisible] = useState(false);
 
   // 1. Structural React State Hooks
   const [loading, setLoading] = useState(false);
@@ -16,6 +18,10 @@ const [mapModalVisible , setMapModalVisible] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [addressInput, setAddressInput] = useState('');
   const [promoCodes, setPromoCodes] = useState<any[]>([]);
+  const [giftProducts, setGiftProducts] = useState<any[]>([]);
+  const [giftProductsLoading, setGiftProductsLoading] = useState(false);
+  const [giftProductsError, setGiftProductsError] = useState('');
+  const [giftProductId, setGiftProductId] = useState('');
   
   const [newCode, setNewCode] = useState({
     code: '',
@@ -45,6 +51,9 @@ const [mapModalVisible , setMapModalVisible] = useState(false);
     warehouseLat: '34.5330',
     warehouseLng: '69.1660'
   });
+  const selectedGiftProduct = giftProducts.find(
+    (product) => product.id === giftProductId
+  );
   // 🎯 THE PROMO CODE SUBMISSION LEDGER CONTROLLER
   const [promoLoading, setPromoLoading] = useState(false);
 
@@ -95,6 +104,52 @@ const [mapModalVisible , setMapModalVisible] = useState(false);
       }
     } catch (e) {
       console.warn("⚠️ Codes ledger retrieval deferred:", e);
+    }
+  };
+
+  const loadGiftProducts = async () => {
+    setGiftProductsLoading(true);
+    setGiftProductsError('');
+    try {
+      const products: any[] = [];
+      let page = 1;
+      const pageSize = 50;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await fetch(
+          `${API_URL}/api/products?limit=${pageSize}&page=${page}`
+        );
+        if (!response.ok) {
+          throw new Error(`Product catalog request failed: ${response.status}`);
+        }
+
+        const batch = await response.json();
+        if (!Array.isArray(batch)) {
+          throw new Error('Product catalog returned an invalid response.');
+        }
+
+        products.push(...batch);
+        hasMore = batch.length === pageSize;
+        page += 1;
+      }
+
+      const availableProducts = products.filter(
+        (product) =>
+          product?.isAvailable === true &&
+          Number(product?.stockQuantity ?? 0) > 0
+      );
+      setGiftProducts(availableProducts);
+      setGiftProductId((currentId) =>
+        availableProducts.some((product) => String(product.id) === currentId)
+          ? currentId
+          : ''
+      );
+    } catch (error) {
+      console.error('Failed to load gift products:', error);
+      setGiftProductsError('Could not load available products. Please try again.');
+    } finally {
+      setGiftProductsLoading(false);
     }
   };
 
@@ -165,6 +220,12 @@ const [mapModalVisible , setMapModalVisible] = useState(false);
             warehouseLat: String(data.warehouseLat || '34.5330'),
             warehouseLng: String(data.warehouseLng || '69.1660')
           });
+          const configuredGiftId = String(data.rewardValue || '');
+          setGiftProductId(
+            data.rewardType === 'gift' && UUID_PATTERN.test(configuredGiftId)
+              ? configuredGiftId
+              : ''
+          );
         }
         await loadPromoCodes();
       } catch (err) {
@@ -178,6 +239,11 @@ const [mapModalVisible , setMapModalVisible] = useState(false);
 
   // 4. 🎯 THE HARDENED RETENTION SAVING ENGINE PIPELINE
   const handleSave = async () => {
+    if (form.rewardType === 'gift' && !giftProductId) {
+      Alert.alert('Choose a gift', 'Select an available product for the milestone gift before saving.');
+      return;
+    }
+
     setLoading(true);
     try {
       console.log("🛰️ Transporting verified tracking fields configuration down to Cloudflare Worker...");
@@ -198,7 +264,7 @@ const [mapModalVisible , setMapModalVisible] = useState(false);
           // 🎯 THE COMPLIANT DATA PAYLOAD MATCH: Packs values safely over the network wire to update the DB table
           rewardThreshold: form.rewardThreshold,
           rewardType: form.rewardType,
-          rewardValue: form.rewardValue,
+          rewardValue: form.rewardType === 'gift' ? giftProductId : form.rewardValue,
 
           prepaymentThreshold: form.prepaymentThreshold,
           prepaymentPercentage: form.prepaymentPercentage,
@@ -493,21 +559,62 @@ const [mapModalVisible , setMapModalVisible] = useState(false);
             <TouchableOpacity 
               activeOpacity={0.8}
               style={[styles.switcherBtn, form.rewardType === 'gift' && styles.switcherBtnActive]}
-              onPress={() => setForm({ ...form, rewardType: 'gift' })}
+              onPress={() => {
+                setForm({ ...form, rewardType: 'gift' });
+                setGiftModalVisible(true);
+                void loadGiftProducts();
+              }}
             >
-              <Text style={[styles.switcherBtnText, form.rewardType === 'gift' && styles.switcherBtnTextActive]}>FREE GIFT TEXT</Text>
+              <Text style={[styles.switcherBtnText, form.rewardType === 'gift' && styles.switcherBtnTextActive]}>FREE GIFT PRODUCT</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.inputWrapper, { marginTop: 14 }]}>
-            <Text style={styles.label}>REWARD VALUE OR GIFT LABEL DESCRIPTION</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.rewardValue} 
-              onChangeText={(v) => setForm({ ...form, rewardValue: v })} 
-              placeholder="e.g. 500 or Free Luxury Watch" 
-            />
-          </View>
+          {form.rewardType === 'gift' ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                setGiftModalVisible(true);
+                void loadGiftProducts();
+              }}
+              style={{
+                marginTop: 14,
+                minHeight: 76,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: '#EAEAEA',
+                borderRadius: 12,
+                backgroundColor: '#FAFAFA',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              {selectedGiftProduct?.imageUrl ? (
+                <Image
+                  source={{ uri: selectedGiftProduct.imageUrl }}
+                  style={{ width: 52, height: 52, borderRadius: 8, backgroundColor: '#EEE' }}
+                />
+              ) : null}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>SELECTED FREE GIFT</Text>
+                <Text style={{ color: '#111', fontSize: 13, fontWeight: '700', marginTop: 5 }}>
+                  {selectedGiftProduct?.name || 'Choose an available product'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#555" />
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.inputWrapper, { marginTop: 14 }]}>
+              <Text style={styles.label}>DISCOUNT REWARD VALUE (AFN)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={form.rewardValue}
+                onChangeText={(v) => setForm({ ...form, rewardValue: v })}
+                placeholder="e.g. 500"
+              />
+            </View>
+          )}
         </View>
 
 
@@ -751,6 +858,89 @@ const [mapModalVisible , setMapModalVisible] = useState(false);
 
   </View>
 </Modal>
+      <Modal
+        visible={giftModalVisible}
+        animationType="slide"
+        onRequestClose={() => setGiftModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: '#F7F7F8' }}>
+          <View
+            style={{
+              minHeight: 60,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 18,
+              backgroundColor: '#FFF',
+              borderBottomWidth: 1,
+              borderBottomColor: '#EEE',
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#111' }}>Choose a free gift</Text>
+            <TouchableOpacity onPress={() => setGiftModalVisible(false)} accessibilityLabel="Close gift product picker">
+              <Ionicons name="close" size={26} color="#111" />
+            </TouchableOpacity>
+          </View>
+          {giftProductsLoading ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <ActivityIndicator color="#111" />
+              <Text style={{ color: '#666', fontSize: 12 }}>Loading available products...</Text>
+            </View>
+          ) : giftProductsError ? (
+            <View style={{ padding: 24, alignItems: 'center', gap: 12 }}>
+              <Text style={{ color: '#A11', textAlign: 'center' }}>{giftProductsError}</Text>
+              <TouchableOpacity onPress={() => void loadGiftProducts()} style={styles.saveMainBtn}>
+                <Text style={styles.saveMainBtnText}>TRY AGAIN</Text>
+              </TouchableOpacity>
+            </View>
+          ) : giftProducts.length === 0 ? (
+            <View style={{ padding: 24, alignItems: 'center' }}>
+              <Text style={{ color: '#666', textAlign: 'center' }}>There are no in-stock products available to use as a gift.</Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+              {giftProducts.map((product) => {
+                const selected = product.id === giftProductId;
+                return (
+                  <TouchableOpacity
+                    key={product.id}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setGiftProductId(String(product.id));
+                      setGiftModalVisible(false);
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: 10,
+                      backgroundColor: '#FFF',
+                      borderWidth: 1,
+                      borderColor: selected ? '#111' : '#EAEAEA',
+                      borderRadius: 12,
+                    }}
+                  >
+                    {product.imageUrl ? (
+                      <Image source={{ uri: product.imageUrl }} style={{ width: 64, height: 64, borderRadius: 8, backgroundColor: '#EEE' }} />
+                    ) : (
+                      <View style={{ width: 64, height: 64, borderRadius: 8, backgroundColor: '#EEE', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="image-outline" size={22} color="#999" />
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#111', fontWeight: '700', fontSize: 13 }}>{product.name}</Text>
+                      <Text style={{ color: '#666', marginTop: 4, fontSize: 12 }}>
+                        AFN {Number(product.basePrice || 0).toLocaleString()} · {Number(product.stockQuantity)} in stock
+                      </Text>
+                    </View>
+                    {selected ? <Ionicons name="checkmark-circle" size={22} color="#15803D" /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
