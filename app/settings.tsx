@@ -136,8 +136,7 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
 
       const availableProducts = products.filter(
         (product) =>
-          product?.isAvailable === true &&
-          Number(product?.stockQuantity ?? 0) > 0
+          product?.isAvailable === true
       );
       setGiftProducts(availableProducts);
       setGiftProductId((currentId) =>
@@ -895,7 +894,7 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
             </View>
           ) : giftProducts.length === 0 ? (
             <View style={{ padding: 24, alignItems: 'center' }}>
-              <Text style={{ color: '#666', textAlign: 'center' }}>There are no in-stock products available to use as a gift.</Text>
+              <Text style={{ color: '#666', textAlign: 'center' }}>There are no available products to use as a gift.</Text>
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
@@ -930,7 +929,7 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: '#111', fontWeight: '700', fontSize: 13 }}>{product.name}</Text>
                       <Text style={{ color: '#666', marginTop: 4, fontSize: 12 }}>
-                        AFN {Number(product.basePrice || 0).toLocaleString()} · {Number(product.stockQuantity)} in stock
+                        AFN {Number(product.basePrice || 0).toLocaleString()} · Available
                       </Text>
                     </View>
                     {selected ? <Ionicons name="checkmark-circle" size={22} color="#15803D" /> : null}
