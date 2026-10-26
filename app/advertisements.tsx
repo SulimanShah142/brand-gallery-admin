@@ -4,6 +4,7 @@ import {
   Alert,
   StyleSheet,
   ScrollView,
+  FlatList,
   TextInput,
   TouchableOpacity,
   Image,
@@ -614,38 +615,43 @@ return (
       )}
 
       {/* PRODUCT LIST */}
-      <ScrollView
+      <FlatList
         style={styles.productList}
-        showsVerticalScrollIndicator={false}
-      >
-        {filteredProducts.length > 0 ? filteredProducts.map((p) => (
+        data={filteredProducts}
+        keyExtractor={(product) => String(product.id)}
+        renderItem={({ item: product }) => (
           <TouchableOpacity
-            key={p.id}
             style={styles.productItem}
             onPress={() => {
-              setSelectedProduct(p);
+              setSelectedProduct(product);
               closeProductModal();
             }}
           >
             <Image
-              source={{ uri: p.imageUrl }}
+              source={{ uri: product.imageUrl }}
               style={styles.productThumb}
             />
 
             <View style={{ flex: 1 }}>
               <Text style={styles.productName}>
-                {p.name}
+                {product.name}
               </Text>
 
               <Text style={styles.productPrice}>
-                ${p.usdPrice}
+                ${product.usdPrice}
               </Text>
             </View>
           </TouchableOpacity>
-        )) : (
-          <Text style={styles.emptyProducts}>No products match your filters.</Text>
         )}
-      </ScrollView>
+        ListEmptyComponent={
+          <Text style={styles.emptyProducts}>No products match your filters.</Text>
+        }
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={5}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      />
     </View>
   </View>
   </Modal>
