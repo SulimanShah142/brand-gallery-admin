@@ -1,14 +1,14 @@
 {
   "expo": {
     "name": "Brand Gallery Admin",
-    "slug": "admin-panel",
-    "version": "1.0.1",
+    "slug": "brand-gallery-admin",
+    "version": "1.0.3",
     "main": "expo-router/entry",
     "scheme": "adminpanel",
     "userInterfaceStyle": "automatic",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.jpeg",
-    "owner": "shah-suliman",
+    "owner": "slliman",
     "ios": {
       "supportsTablet": true
     },
@@ -28,8 +28,6 @@
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
@@ -46,7 +44,7 @@
         }
       ],
       "expo-router",
-       [
+      [
         "expo-build-properties",
         {
           "android": {
@@ -63,7 +61,6 @@
           }
         }
       ],
-
       [
         "expo-splash-screen",
         {
@@ -103,11 +100,11 @@
       "router": {},
       "oneSignalAppId": "e3d802e0-664f-4952-9c42-7b7effde4866",
       "eas": {
-        "projectId": "a53250b7-ba98-47ea-97e5-397d72b88602"
+        "projectId": "4b3b0d77-5bcc-4e42-9c65-2fc7d07d06bc"
       }
     },
     "updates": {
-      "url": "https://u.expo.dev/a53250b7-ba98-47ea-97e5-397d72b88602"
+      "url": "https://u.expo.dev/4b3b0d77-5bcc-4e42-9c65-2fc7d07d06bc"
     }
   }
 }

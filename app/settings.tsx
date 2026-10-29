@@ -33,7 +33,8 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [newCode, setNewCode] = useState({
     code: '',
     value: '',
-    type: 'percentage'
+    type: 'percentage',
+    maxUsesPerUser: '1',
   });
 
   // 🎯 SCHEMA RETENTION UPDATE: Initial form fields fully mapped to capture your exact database schema parameters
@@ -100,7 +101,8 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
         body: JSON.stringify({
           code: newCode.code.toUpperCase().trim(),
           value: newCode.value.trim(),
-          type: newCode.type
+          type: newCode.type,
+          maxUsesPerUser: Number(newCode.maxUsesPerUser),
         })
       });
 
@@ -109,7 +111,7 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
       if (res.ok) {
         Alert.alert("Success", "Promotional discount voucher successfully registered to database ledger!");
         // Clear creation form fields cleanly
-        setNewCode({ code: '', value: '', type: 'percentage' });
+        setNewCode({ code: '', value: '', type: 'percentage', maxUsesPerUser: '1' });
         await loadPromoCodes(); // Refresh active dashboard view array lines instantly
       } else {
         Alert.alert("Error", result.error || "Could not preserve promo code node inside central tables.");
@@ -463,12 +465,13 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
           code: newCode.code.toUpperCase().trim(),
           value: newCode.value,
           type: newCode.type, 
+          maxUsesPerUser: Number(newCode.maxUsesPerUser),
         }),
       });
 
       if (res.ok) {
         Alert.alert("Success", "Promo code active");
-        setNewCode({ code: '', value: '', type: 'percentage' });
+        setNewCode({ code: '', value: '', type: 'percentage', maxUsesPerUser: '1' });
         await loadPromoCodes();
       } else {
         const err = await res.json();
@@ -715,6 +718,18 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
               keyboardType="numeric"
             />
 
+            <TextInput
+              style={styles.input}
+              placeholder="MAX USES PER USER (e.g. 1, 2, 3)"
+              placeholderTextColor="#999999"
+              value={newCode.maxUsesPerUser}
+              onChangeText={(text) => setNewCode(prev => ({
+                ...prev,
+                maxUsesPerUser: text.replace(/[^0-9]/g, ''),
+              }))}
+              keyboardType="number-pad"
+            />
+
             {/* TOGGLE PILL ARRAYS MULTI-CHALLENGE SYSTEM */}
             <Text style={styles.label}>Discount Type</Text>
             <View style={styles.vehicleRow}>
@@ -761,7 +776,7 @@ const [giftModalVisible, setGiftModalVisible] = useState(false);
                   <View style={{ flex: 1 }}>
                     <Text style={styles.ledgerCodeName}>{item.code}</Text>
                     <Text style={styles.ledgerMeta}>
-                      VALUE: {item.value}  |  TYPE: {(item.type || item.discountType || 'percentage').toUpperCase()}
+                      VALUE: {item.value}  |  TYPE: {(item.type || item.discountType || 'percentage').toUpperCase()}  |  USES PER USER: {item.maxUsesPerUser ?? 1}
                     </Text>
                   </View>
                   <TouchableOpacity onPress={() => deleteCode(item.id)} style={styles.deleteBtn} activeOpacity={0.7}>
