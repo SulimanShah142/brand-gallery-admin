@@ -301,7 +301,7 @@ const isRefundState = refundStates.includes(rawStatus);
       <TouchableOpacity
         activeOpacity={0.8}
         style={styles.cardMain}
-        onPress={() => router.push(`orders/${item.id}`)}
+        onPress={() => router.push({ pathname: '/orders/[id]', params: { id: String(item.id) } })}
       >
         <View style={styles.idRow}>
           <Text style={styles.orderId}>
@@ -332,6 +332,12 @@ const isRefundState = refundStates.includes(rawStatus);
         <Text style={styles.amount}>
           TOTAL: AFN {Math.round(item.totalAmount || 0).toLocaleString()}
         </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+          <Text style={{ color: '#666', fontSize: 11, fontWeight: '700' }}>
+            TAP TO VIEW FULL ORDER DETAILS
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color="#666" style={{ marginLeft: 4 }} />
+        </View>
         {item.items?.filter((orderItem: any) => orderItem.isGift).map((giftItem: any) => (
           <Text
             key={`gift-${giftItem.id}`}

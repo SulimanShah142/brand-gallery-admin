@@ -156,6 +156,7 @@ const [reasonType, setReasonType] = useState<
 
 const [reasonText, setReasonText] = useState('');
   const [openingChat, setOpeningChat] = useState(false);
+  const [quantityUpdatingId, setQuantityUpdatingId] = useState<string | null>(null);
   // 2. Parallel Resource Fetch Initializer
   // 1. DATA SEEDING INITIALIZER: Parallel Resource Data Fetch Engine
   useEffect(() => {
@@ -379,6 +380,83 @@ const updateStatus = async (
   }
 };
 
+const updateItemQuantity = async (item: any, quantity: number) => {
+  if (!Number.isInteger(quantity) || quantity < 1 || quantityUpdatingId) return;
+
+  setQuantityUpdatingId(String(item.id));
+  try {
+    const response = await fetch(
+      `${API_URL}/api/admin/orders/${id}/items/${item.id}/quantity`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result?.error || 'Could not update item quantity');
+
+    setOrder((current: any) => ({
+      ...current,
+      subtotal: result.order?.subtotal ?? current.subtotal,
+      totalAmount: result.order?.totalAmount ?? current.totalAmount,
+      items: current.items.map((currentItem: any) =>
+        currentItem.id === item.id ? { ...currentItem, quantity: result.item.quantity } : currentItem
+      ),
+    }));
+
+    Alert.alert(
+      result.notificationSent ? 'Order updated' : 'Order updated, notification failed',
+      result.notificationSent
+        ? `${item.productName || item.name || 'Item'} quantity changed from ${item.quantity} to ${quantity}. The customer was notified.`
+        : 'The quantity was saved, but the customer notification could not be sent.'
+    );
+  } catch (error) {
+    Alert.alert('Update failed', error instanceof Error ? error.message : 'Could not update item quantity');
+  } finally {
+    setQuantityUpdatingId(null);
+  }
+};
+
+const cancelOrder = () => {
+  Alert.alert(
+    'Cancel this order?',
+    'The customer will be notified that this order was cancelled.',
+    [
+      { text: 'Keep order', style: 'cancel' },
+      {
+        text: 'Cancel order',
+        style: 'destructive',
+        onPress: async () => {
+          setStatusSubmitting(true);
+          try {
+            const response = await fetch(`${API_URL}/api/admin/orders/${id}/cancel`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                reason: rejectionReason.trim() || 'Cancelled by admin.',
+              }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result?.error || 'Could not cancel order');
+            setOrder((current: any) => ({ ...current, ...result.order }));
+            Alert.alert(
+              result.notificationSent ? 'Order cancelled' : 'Order cancelled, notification failed',
+              result.notificationSent
+                ? 'The customer has been notified.'
+                : 'The order was cancelled, but the customer notification could not be sent.'
+            );
+          } catch (error) {
+            Alert.alert('Cancellation failed', error instanceof Error ? error.message : 'Could not cancel order');
+          } finally {
+            setStatusSubmitting(false);
+          }
+        },
+      },
+    ]
+  );
+};
+
 const openOrderChat = async () => {
   if (!order?.userId) {
     Alert.alert('Chat unavailable', 'This order is not linked to a customer account.');
@@ -547,6 +625,19 @@ const getStatusColor = (status: string) => {
  const rawStatus = String(order?.status || '')
   .trim()
   .toLowerCase();
+   const canEditOrderItems = ![
+     'delivered',
+     'rejected',
+     'cancelled',
+     'cancelled_by_user',
+     'cancelled_by_packager',
+     'cancelled_by_deliverer',
+     'refund_requested',
+     'refund_approved',
+     'refund_pickup_in_progress',
+     'refund_rejected',
+     'refunded',
+   ].includes(rawStatus);
   const canonicalStatus = normalizeStatus(rawStatus);
   
   const statusConfig = getStatusColor(canonicalStatus);
@@ -820,7 +911,7 @@ const isRefundJob =
               </View>
 
               <Text style={styles.itemMeta}>
-                QTY: {item.quantity} | SIZE:{' '}
+                SIZE:{' '}
                 <Text style={styles.attributeValueHighlight}>
                   {item.selectedSize || item.size || 'STANDARD'}
                 </Text>{' '}
@@ -834,6 +925,42 @@ const isRefundJob =
                   Included free with this qualifying order
                 </Text>
               ) : null}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 9 }}>
+                <TouchableOpacity
+                  accessibilityLabel={`Decrease ${item.productName || item.name} quantity`}
+                  disabled={!canEditOrderItems || Number(item.quantity) <= 1 || statusSubmitting || quantityUpdatingId !== null}
+                  onPress={() => updateItemQuantity(item, Number(item.quantity) - 1)}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    backgroundColor: Number(item.quantity) <= 1 ? '#F3F4F6' : '#E5E7EB',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="remove" size={17} color={Number(item.quantity) <= 1 ? '#9CA3AF' : '#111827'} />
+                </TouchableOpacity>
+                <Text style={{ minWidth: 42, textAlign: 'center', fontSize: 13, fontWeight: '800', color: '#111827' }}>
+                  {quantityUpdatingId === String(item.id) ? '…' : item.quantity}
+                </Text>
+                <TouchableOpacity
+                  accessibilityLabel={`Increase ${item.productName || item.name} quantity`}
+                  disabled={!canEditOrderItems || statusSubmitting || quantityUpdatingId !== null}
+                  onPress={() => updateItemQuantity(item, Number(item.quantity) + 1)}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    backgroundColor: '#111827',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="add" size={17} color="#FFFFFF" />
+                </TouchableOpacity>
+                <Text style={{ marginLeft: 8, color: '#6B7280', fontSize: 11, fontWeight: '700' }}>QTY</Text>
+              </View>
             </View>
 
             <Text style={styles.price}>
@@ -1158,6 +1285,30 @@ const isRefundJob =
         READY FOR DRIVER ASSIGNMENT
       </Text>
     </View>
+  )}
+
+  {canEditOrderItems && (
+    <TouchableOpacity
+      disabled={statusSubmitting || quantityUpdatingId !== null}
+      onPress={cancelOrder}
+      style={{
+        marginTop: 14,
+        minHeight: 48,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        backgroundColor: '#FEF2F2',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: statusSubmitting ? 0.6 : 1,
+      }}
+    >
+      <Ionicons name="close-circle-outline" size={18} color="#DC2626" />
+      <Text style={{ marginLeft: 8, color: '#B91C1C', fontWeight: '900', fontSize: 12 }}>
+        CANCEL ORDER & NOTIFY CUSTOMER
+      </Text>
+    </TouchableOpacity>
   )}
 
   {/* =========================
