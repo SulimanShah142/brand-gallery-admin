@@ -625,6 +625,13 @@ const getStatusColor = (status: string) => {
  const rawStatus = String(order?.status || '')
   .trim()
   .toLowerCase();
+  const canCancelOrder = ![
+    'cancelled',
+    'canceled',
+    'cancelled_by_user',
+    'cancelled_by_packager',
+    'cancelled_by_deliverer',
+  ].includes(rawStatus);
    const canEditOrderItems = ![
      'delivered',
      'rejected',
@@ -1287,7 +1294,7 @@ const isRefundJob =
     </View>
   )}
 
-  {canEditOrderItems && (
+  {canCancelOrder && (
     <TouchableOpacity
       disabled={statusSubmitting || quantityUpdatingId !== null}
       onPress={cancelOrder}
