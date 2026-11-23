@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -51,6 +51,12 @@ async function persistProductImage(uri: string, prefix: string): Promise<string>
 // Inside your Admin Products Page file -> Top section before the return block
 export default function AdminProductsPage() {
   const router = useRouter();
+  const { productId, productName } = useLocalSearchParams<{
+    productId?: string;
+    productName?: string;
+  }>();
+  const targetProductId = Array.isArray(productId) ? productId[0] : productId;
+  const targetProductName = Array.isArray(productName) ? productName[0] : productName;
 
   // =========================================================
   // TYPES
@@ -107,6 +113,7 @@ const [loading, setLoading] = useState(false);
   // =========================================================
 
   const [products, setProducts] = useState<any[]>([]);
+  const [highlightedProduct, setHighlightedProduct] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
 
@@ -416,6 +423,48 @@ useEffect(() => {
 
 }, []);
 
+useEffect(() => {
+  if (!targetProductId) {
+    setHighlightedProduct(null);
+    setSearchQuery(targetProductName || '');
+    return;
+  }
+
+  let cancelled = false;
+  setSearchQuery(targetProductName || '');
+
+  const loadTargetProduct = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/admin/products/${encodeURIComponent(targetProductId)}`
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Could not load the requested product');
+      }
+
+      if (!cancelled) {
+        setHighlightedProduct(result);
+        setSearchQuery(result.name || targetProductName || '');
+      }
+    } catch (error) {
+      console.error('Failed to load the requested catalog product:', error);
+      if (!cancelled) {
+        Alert.alert(
+          'Product unavailable',
+          error instanceof Error ? error.message : 'Could not load this product.'
+        );
+      }
+    }
+  };
+
+  loadTargetProduct();
+  return () => {
+    cancelled = true;
+  };
+}, [targetProductId, targetProductName]);
+
   // =========================================================
 // LOAD SETTINGS
 // =========================================================
@@ -431,26 +480,34 @@ useEffect(() => {
         .trim()
         .toLowerCase();
 
-    if (!query) {
-      return products;
-    }
+    const otherProducts = highlightedProduct
+      ? products.filter(
+          product => String(product.id) !== String(highlightedProduct.id)
+        )
+      : products;
+    const matchingProducts = !query
+      ? otherProducts
+      : otherProducts.filter(
+          product =>
+            String(product.name || '')
+              .toLowerCase()
+              .includes(query) ||
 
-    return products.filter(
-      product =>
-        String(product.name || '')
-          .toLowerCase()
-          .includes(query) ||
+            String(product.namePs || '')
+              .toLowerCase()
+              .includes(query) ||
 
-        String(product.namePs || '')
-          .toLowerCase()
-          .includes(query) ||
+            String(product.nameFa || '')
+              .toLowerCase()
+              .includes(query)
+        );
 
-        String(product.nameFa || '')
-          .toLowerCase()
-          .includes(query)
-    );
+    return highlightedProduct
+      ? [highlightedProduct, ...matchingProducts]
+      : matchingProducts;
   }, [
     products,
+    highlightedProduct,
     searchQuery,
   ]);
 

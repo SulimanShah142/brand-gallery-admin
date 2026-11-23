@@ -157,6 +157,73 @@ const [reasonType, setReasonType] = useState<
 const [reasonText, setReasonText] = useState('');
   const [openingChat, setOpeningChat] = useState(false);
   const [quantityUpdatingId, setQuantityUpdatingId] = useState<string | null>(null);
+const [selectedProductItem, setSelectedProductItem] = useState<any>(null);
+const [productDetails, setProductDetails] = useState<any>(null);
+const [productDetailsLoading, setProductDetailsLoading] = useState(false);
+const [productDetailsError, setProductDetailsError] = useState(false);
+
+useEffect(() => {
+  if (!selectedProductItem?.productId) {
+    setProductDetails(null);
+    setProductDetailsLoading(false);
+    setProductDetailsError(false);
+    return;
+  }
+
+  let cancelled = false;
+  setProductDetailsLoading(true);
+  setProductDetailsError(false);
+
+  const loadProductDetails = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/admin/products/${selectedProductItem.productId}`
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Could not load product details');
+      }
+
+      if (!cancelled) {
+        setProductDetails(result);
+      }
+    } catch (error) {
+      console.error('Failed to load order product details:', error);
+      if (!cancelled) {
+        setProductDetails(null);
+        setProductDetailsError(true);
+      }
+    } finally {
+      if (!cancelled) {
+        setProductDetailsLoading(false);
+      }
+    }
+  };
+
+  loadProductDetails();
+  return () => {
+    cancelled = true;
+  };
+}, [selectedProductItem]);
+
+const openProductDetails = (item: any) => {
+  setSelectedProductItem(item);
+  setProductDetails(null);
+  setProductDetailsError(false);
+};
+
+const viewProductInCatalog = (item: any) => {
+  setSelectedProductItem(null);
+  router.push({
+    pathname: '/products',
+    params: {
+      productId: String(item.productId || ''),
+      productName: String(item.productName || item.name || ''),
+    },
+  });
+};
+
   // 2. Parallel Resource Fetch Initializer
   // 1. DATA SEEDING INITIALIZER: Parallel Resource Data Fetch Engine
   useEffect(() => {
@@ -900,10 +967,17 @@ const isRefundJob =
 
         {order.items?.map((item: any) => (
           <View key={`item-${item.id}`} style={styles.itemRow}>
-            <Image
-              source={{ uri: item.productImage || item.imageUrl }}
-              style={styles.thumb}
-            />
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`View details for ${item.productName || item.name || 'ordered product'}`}
+              onPress={() => openProductDetails(item)}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: item.productImage || item.imageUrl }}
+                style={styles.thumb}
+              />
+            </TouchableOpacity>
 
             <View style={{ flex: 1, marginLeft: 15 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 }}>
@@ -968,6 +1042,14 @@ const isRefundJob =
                 </TouchableOpacity>
                 <Text style={{ marginLeft: 8, color: '#6B7280', fontSize: 11, fontWeight: '700' }}>QTY</Text>
               </View>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => viewProductInCatalog(item)}
+                style={styles.viewProductButton}
+              >
+                <Ionicons name="open-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.viewProductButtonText}>VIEW PRODUCT</Text>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.price}>
@@ -1598,6 +1680,163 @@ const isRefundJob =
 )}
 
 <Modal
+  visible={!!selectedProductItem}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setSelectedProductItem(null)}
+>
+  <View style={styles.productModalOverlay}>
+    <View style={styles.productModalCard}>
+      <View style={styles.productModalHeader}>
+        <Text style={styles.productModalTitle}>PRODUCT DETAILS</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Close product details"
+          onPress={() => setSelectedProductItem(null)}
+          style={styles.productModalClose}
+        >
+          <Ionicons name="close" size={20} color="#111827" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 8 }}
+      >
+        {(() => {
+          const product = productDetails || selectedProductItem || {};
+          const imageUrl =
+            product.imageUrl ||
+            selectedProductItem?.productImage ||
+            selectedProductItem?.imageUrl;
+          let sizes: string[] = [];
+          if (Array.isArray(product.availableSizes)) {
+            sizes = product.availableSizes.map(String);
+          } else if (typeof product.availableSizes === 'string') {
+            const rawSizes = product.availableSizes.trim();
+            if (rawSizes) {
+              try {
+                const parsedSizes = JSON.parse(rawSizes);
+                sizes = Array.isArray(parsedSizes)
+                  ? parsedSizes.map(String)
+                  : rawSizes.split(',');
+              } catch {
+                sizes = rawSizes.split(',');
+              }
+            }
+            sizes = sizes.map((size) => size.trim()).filter(Boolean);
+          }
+          const colors = Array.isArray(product.colors)
+            ? product.colors.map((color: any) => color.name).filter(Boolean)
+            : [];
+          const productName =
+            product.name ||
+            selectedProductItem?.productName ||
+            selectedProductItem?.name ||
+            'Unnamed product';
+
+          return (
+            <>
+              {imageUrl ? (
+                <Image source={{ uri: imageUrl }} style={styles.productModalImage} />
+              ) : null}
+              <Text style={styles.productModalName}>{productName}</Text>
+              {productDetailsLoading ? (
+                <View style={styles.productDetailsLoading}>
+                  <ActivityIndicator size="small" color="#111827" />
+                  <Text style={styles.productDetailsLoadingText}>Loading full product details…</Text>
+                </View>
+              ) : null}
+              {productDetailsError ? (
+                <Text style={styles.productDetailsNotice}>
+                  Showing the saved order details; full catalog details could not be loaded.
+                </Text>
+              ) : null}
+
+              <View style={styles.productModalDetails}>
+                <View style={styles.productModalDetailRow}>
+                  <Text style={styles.productModalLabel}>ORDER PRICE</Text>
+                  <Text style={styles.productModalValue}>
+                    AFN {(Number(selectedProductItem?.price) || 0).toLocaleString()}
+                  </Text>
+                </View>
+                {product.usdPrice != null ? (
+                  <View style={styles.productModalDetailRow}>
+                    <Text style={styles.productModalLabel}>CATALOG PRICE</Text>
+                    <Text style={styles.productModalValue}>USD {product.usdPrice}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.productModalDetailRow}>
+                  <Text style={styles.productModalLabel}>QUANTITY</Text>
+                  <Text style={styles.productModalValue}>{selectedProductItem?.quantity || 1}</Text>
+                </View>
+                {product.id || selectedProductItem?.productId ? (
+                  <View style={styles.productModalDetailRow}>
+                    <Text style={styles.productModalLabel}>PRODUCT ID</Text>
+                    <Text style={styles.productModalValue}>
+                      {product.id || selectedProductItem.productId}
+                    </Text>
+                  </View>
+                ) : null}
+                {product.categoryId ? (
+                  <View style={styles.productModalDetailRow}>
+                    <Text style={styles.productModalLabel}>CATEGORY ID</Text>
+                    <Text style={styles.productModalValue}>{product.categoryId}</Text>
+                  </View>
+                ) : null}
+                {(selectedProductItem?.selectedSize || selectedProductItem?.size) ? (
+                  <View style={styles.productModalDetailRow}>
+                    <Text style={styles.productModalLabel}>ORDER SIZE</Text>
+                    <Text style={styles.productModalValue}>
+                      {selectedProductItem.selectedSize || selectedProductItem.size}
+                    </Text>
+                  </View>
+                ) : null}
+                {(selectedProductItem?.selectedColor || selectedProductItem?.color) ? (
+                  <View style={styles.productModalDetailRow}>
+                    <Text style={styles.productModalLabel}>ORDER COLOR</Text>
+                    <Text style={styles.productModalValue}>
+                      {selectedProductItem.selectedColor || selectedProductItem.color}
+                    </Text>
+                  </View>
+                ) : null}
+                {sizes.length ? (
+                  <View style={styles.productModalDetailRow}>
+                    <Text style={styles.productModalLabel}>AVAILABLE SIZES</Text>
+                    <Text style={styles.productModalValue}>{sizes.join(', ')}</Text>
+                  </View>
+                ) : null}
+                {colors.length ? (
+                  <View style={styles.productModalDetailRow}>
+                    <Text style={styles.productModalLabel}>COLORS</Text>
+                    <Text style={styles.productModalValue}>{colors.join(', ')}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {product.description ? (
+                <View style={styles.productModalDescription}>
+                  <Text style={styles.productModalLabel}>DESCRIPTION</Text>
+                  <Text style={styles.productModalDescriptionText}>{product.description}</Text>
+                </View>
+              ) : null}
+            </>
+          );
+        })()}
+      </ScrollView>
+
+      <TouchableOpacity
+        onPress={() => viewProductInCatalog(selectedProductItem)}
+        style={styles.productModalViewButton}
+      >
+        <Ionicons name="open-outline" size={16} color="#FFFFFF" />
+        <Text style={styles.productModalViewButtonText}>VIEW IN PRODUCT CATALOG</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
+<Modal
   visible={reasonModalVisible}
   transparent
   animationType="fade"
@@ -1779,6 +2018,139 @@ reasonModalCard: {
   elevation: 20,
 
   zIndex: 5,
+},
+
+productModalOverlay: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 18,
+  backgroundColor: 'rgba(0,0,0,0.55)',
+},
+
+productModalCard: {
+  width: '100%',
+  maxHeight: '88%',
+  backgroundColor: '#FFFFFF',
+  borderRadius: 20,
+  padding: 18,
+},
+
+productModalHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 12,
+},
+
+productModalTitle: {
+  color: '#6B7280',
+  fontSize: 11,
+  fontWeight: '900',
+  letterSpacing: 1.2,
+},
+
+productModalClose: {
+  width: 34,
+  height: 34,
+  borderRadius: 17,
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#F3F4F6',
+},
+
+productModalImage: {
+  width: '100%',
+  height: 230,
+  borderRadius: 14,
+  backgroundColor: '#F3F4F6',
+  marginBottom: 14,
+  resizeMode: 'contain',
+},
+
+productModalName: {
+  color: '#111827',
+  fontSize: 19,
+  fontWeight: '900',
+  marginBottom: 12,
+},
+
+productDetailsLoading: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+  marginBottom: 12,
+},
+
+productDetailsLoadingText: {
+  color: '#6B7280',
+  fontSize: 12,
+},
+
+productDetailsNotice: {
+  color: '#92400E',
+  backgroundColor: '#FFFBEB',
+  borderRadius: 8,
+  padding: 10,
+  fontSize: 12,
+  marginBottom: 12,
+},
+
+productModalDetails: {
+  borderTopWidth: 1,
+  borderTopColor: '#F3F4F6',
+},
+
+productModalDetailRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  gap: 14,
+  paddingVertical: 9,
+  borderBottomWidth: 1,
+  borderBottomColor: '#F3F4F6',
+},
+
+productModalLabel: {
+  color: '#6B7280',
+  fontSize: 10,
+  fontWeight: '800',
+  letterSpacing: 0.4,
+},
+
+productModalValue: {
+  flex: 1,
+  color: '#111827',
+  fontSize: 12,
+  fontWeight: '700',
+  textAlign: 'right',
+},
+
+productModalDescription: {
+  paddingTop: 14,
+  gap: 7,
+},
+
+productModalDescriptionText: {
+  color: '#4B5563',
+  fontSize: 13,
+  lineHeight: 19,
+},
+
+productModalViewButton: {
+  minHeight: 46,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  backgroundColor: '#111827',
+  borderRadius: 12,
+  marginTop: 14,
+},
+
+productModalViewButtonText: {
+  color: '#FFFFFF',
+  fontSize: 12,
+  fontWeight: '900',
 },
 
 modalHandle: {
@@ -2055,6 +2427,25 @@ confirmBtnText: {
 
     borderWidth: 1,
     borderColor: '#ECECEC',
+  },
+
+  viewProductButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+  },
+
+  viewProductButtonText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.4,
   },
 
   itemName: {
