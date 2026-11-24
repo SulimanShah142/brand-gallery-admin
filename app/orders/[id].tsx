@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView, Platform, Pressable , TouchableOpacity, Alert, TextInput, Modal, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system/legacy';
 import UnifiedMap from '@/components/UnifiedMap';
 import { API_URL } from '@/lib/config';
 
@@ -161,6 +162,7 @@ const [selectedProductItem, setSelectedProductItem] = useState<any>(null);
 const [productDetails, setProductDetails] = useState<any>(null);
 const [productDetailsLoading, setProductDetailsLoading] = useState(false);
 const [productDetailsError, setProductDetailsError] = useState(false);
+const [downloadingProductImage, setDownloadingProductImage] = useState(false);
 
 useEffect(() => {
   if (!selectedProductItem?.productId) {
@@ -222,6 +224,104 @@ const viewProductInCatalog = (item: any) => {
       productName: String(item.productName || item.name || ''),
     },
   });
+};
+
+const downloadProductImage = async () => {
+  const imageUrl =
+    productDetails?.imageUrl ||
+    selectedProductItem?.productImage ||
+    selectedProductItem?.imageUrl;
+
+  if (!imageUrl) {
+    Alert.alert('Image unavailable', 'There is no product image to download.');
+    return;
+  }
+
+  setDownloadingProductImage(true);
+  let temporaryUri: string | null = null;
+  try {
+    const urlPath = imageUrl.split('?')[0];
+    const extension = urlPath.match(/\.(png|webp|gif|jpe?g)$/i)?.[1]?.toLowerCase() || 'jpg';
+    const mimeType = extension === 'png'
+      ? 'image/png'
+      : extension === 'webp'
+        ? 'image/webp'
+        : extension === 'gif'
+          ? 'image/gif'
+          : 'image/jpeg';
+    const productId = String(
+      productDetails?.id || selectedProductItem?.productId || 'product'
+    ).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `${productId}-${Date.now()}.${extension}`;
+    const baseDirectory = Platform.OS === 'ios'
+      ? FileSystem.documentDirectory
+      : FileSystem.cacheDirectory;
+    if (!baseDirectory) {
+      throw new Error('No local storage is available for this download.');
+    }
+
+    const destination = `${baseDirectory}${fileName}`;
+    const result = await FileSystem.downloadAsync(imageUrl, destination);
+
+    if (result.status < 200 || result.status >= 300) {
+      throw new Error(`Image download failed with status ${result.status}.`);
+    }
+
+    temporaryUri = result.uri;
+
+    if (Platform.OS === 'android') {
+      const permission =
+        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (!permission.granted) {
+        return;
+      }
+
+      const content = await FileSystem.readAsStringAsync(result.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const savedUri = await FileSystem.StorageAccessFramework.createFileAsync(
+        permission.directoryUri,
+        fileName,
+        mimeType
+      );
+      await FileSystem.StorageAccessFramework.writeAsStringAsync(
+        savedUri,
+        content,
+        { encoding: FileSystem.EncodingType.Base64 }
+      );
+    } else {
+      const directory = `${FileSystem.documentDirectory}product-images/`;
+      if (!FileSystem.documentDirectory) {
+        throw new Error('No local storage is available for this download.');
+      }
+      await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+      const savedUri = `${directory}${fileName}`;
+      await FileSystem.moveAsync({ from: result.uri, to: savedUri });
+      temporaryUri = null;
+    }
+
+    Alert.alert(
+      'Image downloaded',
+      Platform.OS === 'android'
+        ? `The product image was saved as ${fileName} in the selected folder.`
+        : `The product image was saved to the app's product-images folder as ${fileName}.`
+    );
+  } catch (error) {
+    console.error('Failed to download order product image:', error);
+    Alert.alert(
+      'Download failed',
+      error instanceof Error ? error.message : 'Could not download the product image.'
+    );
+  } finally {
+    if (temporaryUri) {
+      try {
+        await FileSystem.deleteAsync(temporaryUri, { idempotent: true });
+      } catch (error) {
+        console.warn('Could not remove temporary product image download:', error);
+      }
+    }
+    setDownloadingProductImage(false);
+  }
 };
 
   // 2. Parallel Resource Fetch Initializer
@@ -1734,6 +1834,10 @@ const isRefundJob =
             selectedProductItem?.productName ||
             selectedProductItem?.name ||
             'Unnamed product';
+          const exchangeRate = Number(settings?.usdToAfnRate) || 65;
+          const profitPercentage = Number(product.profitPercentage) || 20;
+          const catalogRetailPriceAfn =
+            Number(product.usdPrice) * exchangeRate * (1 + profitPercentage / 100);
 
           return (
             <>
@@ -1763,7 +1867,9 @@ const isRefundJob =
                 {product.usdPrice != null ? (
                   <View style={styles.productModalDetailRow}>
                     <Text style={styles.productModalLabel}>CATALOG PRICE</Text>
-                    <Text style={styles.productModalValue}>USD {product.usdPrice}</Text>
+                    <Text style={styles.productModalValue}>
+                      AFN {Math.round(catalogRetailPriceAfn).toLocaleString()}
+                    </Text>
                   </View>
                 ) : null}
                 <View style={styles.productModalDetailRow}>
@@ -1825,13 +1931,27 @@ const isRefundJob =
         })()}
       </ScrollView>
 
-      <TouchableOpacity
-        onPress={() => viewProductInCatalog(selectedProductItem)}
-        style={styles.productModalViewButton}
-      >
-        <Ionicons name="open-outline" size={16} color="#FFFFFF" />
-        <Text style={styles.productModalViewButtonText}>VIEW IN PRODUCT CATALOG</Text>
-      </TouchableOpacity>
+      <View style={styles.productModalActions}>
+        <TouchableOpacity
+          disabled={downloadingProductImage}
+          onPress={downloadProductImage}
+          style={[styles.productModalActionButton, styles.productModalDownloadButton]}
+        >
+          {downloadingProductImage
+            ? <ActivityIndicator size="small" color="#111827" />
+            : <Ionicons name="download-outline" size={16} color="#111827" />}
+          <Text style={styles.productModalDownloadButtonText}>
+            {downloadingProductImage ? 'DOWNLOADING...' : 'DOWNLOAD IMAGE'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => viewProductInCatalog(selectedProductItem)}
+          style={[styles.productModalActionButton, styles.productModalViewButton]}
+        >
+          <Ionicons name="open-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.productModalViewButtonText}>VIEW PRODUCT</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   </View>
 </Modal>
@@ -2136,20 +2256,40 @@ productModalDescriptionText: {
   lineHeight: 19,
 },
 
-productModalViewButton: {
+productModalActions: {
+  flexDirection: 'row',
+  gap: 10,
+  marginTop: 14,
+},
+
+productModalActionButton: {
+  flex: 1,
   minHeight: 46,
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
-  backgroundColor: '#111827',
   borderRadius: 12,
-  marginTop: 14,
+  paddingHorizontal: 8,
+},
+
+productModalDownloadButton: {
+  backgroundColor: '#F3F4F6',
+},
+
+productModalDownloadButtonText: {
+  color: '#111827',
+  fontSize: 11,
+  fontWeight: '900',
+},
+
+productModalViewButton: {
+  backgroundColor: '#111827',
 },
 
 productModalViewButtonText: {
   color: '#FFFFFF',
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: '900',
 },
 
