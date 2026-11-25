@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator,KeyboardAvoidingView, Platform, Pressable , TouchableOpacity, Alert, TextInput, Modal, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system/legacy';
 import UnifiedMap from '@/components/UnifiedMap';
 import { API_URL } from '@/lib/config';
 
@@ -162,7 +161,6 @@ const [selectedProductItem, setSelectedProductItem] = useState<any>(null);
 const [productDetails, setProductDetails] = useState<any>(null);
 const [productDetailsLoading, setProductDetailsLoading] = useState(false);
 const [productDetailsError, setProductDetailsError] = useState(false);
-const [downloadingProductImage, setDownloadingProductImage] = useState(false);
 
 useEffect(() => {
   if (!selectedProductItem?.productId) {
@@ -226,102 +224,18 @@ const viewProductInCatalog = (item: any) => {
   });
 };
 
-const downloadProductImage = async () => {
-  const imageUrl =
-    productDetails?.imageUrl ||
-    selectedProductItem?.productImage ||
-    selectedProductItem?.imageUrl;
-
-  if (!imageUrl) {
-    Alert.alert('Image unavailable', 'There is no product image to download.');
+const openProductImageDownload = (item: any) => {
+  const productId = item?.productId || productDetails?.id;
+  if (!productId) {
+    Alert.alert('Image unavailable', 'This order item is not linked to a product.');
     return;
   }
 
-  setDownloadingProductImage(true);
-  let temporaryUri: string | null = null;
-  try {
-    const urlPath = imageUrl.split('?')[0];
-    const extension = urlPath.match(/\.(png|webp|gif|jpe?g)$/i)?.[1]?.toLowerCase() || 'jpg';
-    const mimeType = extension === 'png'
-      ? 'image/png'
-      : extension === 'webp'
-        ? 'image/webp'
-        : extension === 'gif'
-          ? 'image/gif'
-          : 'image/jpeg';
-    const productId = String(
-      productDetails?.id || selectedProductItem?.productId || 'product'
-    ).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `${productId}-${Date.now()}.${extension}`;
-    const baseDirectory = Platform.OS === 'ios'
-      ? FileSystem.documentDirectory
-      : FileSystem.cacheDirectory;
-    if (!baseDirectory) {
-      throw new Error('No local storage is available for this download.');
-    }
-
-    const destination = `${baseDirectory}${fileName}`;
-    const result = await FileSystem.downloadAsync(imageUrl, destination);
-
-    if (result.status < 200 || result.status >= 300) {
-      throw new Error(`Image download failed with status ${result.status}.`);
-    }
-
-    temporaryUri = result.uri;
-
-    if (Platform.OS === 'android') {
-      const permission =
-        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-      if (!permission.granted) {
-        return;
-      }
-
-      const content = await FileSystem.readAsStringAsync(result.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const savedUri = await FileSystem.StorageAccessFramework.createFileAsync(
-        permission.directoryUri,
-        fileName,
-        mimeType
-      );
-      await FileSystem.StorageAccessFramework.writeAsStringAsync(
-        savedUri,
-        content,
-        { encoding: FileSystem.EncodingType.Base64 }
-      );
-    } else {
-      const directory = `${FileSystem.documentDirectory}product-images/`;
-      if (!FileSystem.documentDirectory) {
-        throw new Error('No local storage is available for this download.');
-      }
-      await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
-      const savedUri = `${directory}${fileName}`;
-      await FileSystem.moveAsync({ from: result.uri, to: savedUri });
-      temporaryUri = null;
-    }
-
-    Alert.alert(
-      'Image downloaded',
-      Platform.OS === 'android'
-        ? `The product image was saved as ${fileName} in the selected folder.`
-        : `The product image was saved to the app's product-images folder as ${fileName}.`
-    );
-  } catch (error) {
-    console.error('Failed to download order product image:', error);
-    Alert.alert(
-      'Download failed',
-      error instanceof Error ? error.message : 'Could not download the product image.'
-    );
-  } finally {
-    if (temporaryUri) {
-      try {
-        await FileSystem.deleteAsync(temporaryUri, { idempotent: true });
-      } catch (error) {
-        console.warn('Could not remove temporary product image download:', error);
-      }
-    }
-    setDownloadingProductImage(false);
-  }
+  setSelectedProductItem(null);
+  router.push({
+    pathname: '/download-product-image/[id]',
+    params: { id: String(productId) },
+  });
 };
 
   // 2. Parallel Resource Fetch Initializer
@@ -1933,15 +1847,12 @@ const isRefundJob =
 
       <View style={styles.productModalActions}>
         <TouchableOpacity
-          disabled={downloadingProductImage}
-          onPress={downloadProductImage}
+          onPress={() => openProductImageDownload(selectedProductItem)}
           style={[styles.productModalActionButton, styles.productModalDownloadButton]}
         >
-          {downloadingProductImage
-            ? <ActivityIndicator size="small" color="#111827" />
-            : <Ionicons name="download-outline" size={16} color="#111827" />}
+          <Ionicons name="download-outline" size={16} color="#111827" />
           <Text style={styles.productModalDownloadButtonText}>
-            {downloadingProductImage ? 'DOWNLOADING...' : 'DOWNLOAD IMAGE'}
+            DOWNLOAD IMAGE
           </Text>
         </TouchableOpacity>
         <TouchableOpacity

@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback,  useMemo} from 'react';
 import { 
-  View, FlatList, TextInput, TouchableOpacity, Image, 
+  View, FlatList, TextInput, TouchableOpacity, Image, AppState,
   Text, StyleSheet, Platform, ActivityIndicator, KeyboardAvoidingView, 
   Alert
 } from 'react-native';
 import { io, Socket } from "socket.io-client";
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Crypto from 'expo-crypto';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,6 +22,7 @@ export default function AdminChatSession() {
   const [messages, setMessages] = useState<any[]>([]);
   const [resolvedName, setResolvedName] = useState<string>("");
   const [input, setInput] = useState("");
+  const [peerPresence, setPeerPresence] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const orderContextSentRef = useRef<string | null>(null);
@@ -30,6 +31,8 @@ export default function AdminChatSession() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const initialLoadDone = useRef(false);
+  const inputRef = useRef(input);
+  inputRef.current = input;
 
   // 🎯 THE ROUTING INTRUSION CURE:
   // Capture parameters cleanly. If a conversationId query param exists, prioritize it.
@@ -65,6 +68,63 @@ export default function AdminChatSession() {
     const data = await loadMessages(trueActiveConversationId);
     setMessages(data || []);
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 150);
+  }, [trueActiveConversationId]);
+
+  useEffect(() => {
+    if (!trueActiveConversationId) {
+      setPeerPresence(null);
+      return;
+    }
+
+    let active = true;
+    let requestInFlight = false;
+    const updatePresence = async (online = true) => {
+      if (requestInFlight || (online && AppState.currentState !== 'active')) return;
+      requestInFlight = true;
+      try {
+        const senderId = 'd7569fa1-6f6a-404a-9978-b742a5c5bc36';
+        const updateResponse = await fetch(
+          `${API_URL}/api/conversations/${trueActiveConversationId}/presence`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              senderId,
+              online,
+              isTyping: online && inputRef.current.trim().length > 0,
+            }),
+          }
+        );
+        if (!updateResponse.ok) {
+          throw new Error(`Presence update failed with status ${updateResponse.status}`);
+        }
+
+        if (!online || !active) return;
+        const presence = await updateResponse.json();
+        if (active) setPeerPresence(presence?.user || null);
+      } catch (error) {
+        console.warn('Could not synchronize customer chat presence:', error);
+      } finally {
+        requestInFlight = false;
+      }
+    };
+
+    void updatePresence();
+    const interval = setInterval(() => void updatePresence(), 5000);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void updatePresence();
+      } else {
+        void updatePresence(false);
+      }
+    });
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      appStateSubscription.remove();
+      void updatePresence(false);
+    };
   }, [trueActiveConversationId]);
 
   // Resolve Customer Header Typography
@@ -331,6 +391,19 @@ export default function AdminChatSession() {
         <View style={styles.headerInfo}>
           <Text style={styles.headerLabel}>SUPPORT DIALOG</Text>
           <Text style={styles.userName}>{resolvedName.toUpperCase()}</Text>
+          <Text style={[
+            styles.presenceText,
+            peerPresence?.isOnline && styles.presenceOnline,
+            peerPresence?.isTyping && styles.presenceTyping,
+          ]}>
+            {peerPresence?.isTyping
+              ? 'TYPING…'
+              : peerPresence?.isOnline
+                ? 'ONLINE'
+                : peerPresence?.lastSeenAt
+                  ? `LAST SEEN ${new Date(peerPresence.lastSeenAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : 'OFFLINE'}
+          </Text>
         </View>
         <TouchableOpacity style={styles.headerAction}>
           <Ionicons name="ellipsis-vertical" size={20} color="#000" />
@@ -360,6 +433,12 @@ export default function AdminChatSession() {
               LOADING CONVERSATION
             </Text>
           </View>
+        </View>
+      )}
+
+      {peerPresence?.isTyping && (
+        <View style={styles.typingIndicator}>
+          <Text style={styles.typingIndicatorText}>Customer is typing…</Text>
         </View>
       )}
 
@@ -460,6 +539,18 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1, alignItems: 'center' },
   headerLabel: { fontSize: 9, fontWeight: '800', color: '#BBB', letterSpacing: 2, marginBottom: 2 },
   userName: { fontSize: 13, fontWeight: '900', color: '#000', letterSpacing: 1 },
+  presenceText: { marginTop: 3, fontSize: 10, fontWeight: '700', color: '#9CA3AF' },
+  presenceOnline: { color: '#16A34A' },
+  presenceTyping: { color: '#2563EB' },
+  typingIndicator: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+  },
+  typingIndicatorText: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
   headerAction: { width: 36, height: 36, justifyContent: 'center', alignItems: 'flex-end' },
   
   // List Area
